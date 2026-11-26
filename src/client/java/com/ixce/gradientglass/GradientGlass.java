@@ -69,6 +69,27 @@ public class GradientGlass implements ClientModInitializer {
         return result;
     }
 
+    // 4:1:1:1:1 center smoothing for 2D/diagonal gradients so center aligns with 4-block corners.
+    private static int smoothCenter(int center, int l, int r, int d, int u) {
+        int weight = 4 + (l == 0 ? 0 : 1) + (r == 0 ? 0 : 1) + (d == 0 ? 0 : 1) + (u == 0 ? 0 : 1);
+        int result = 0;
+        for (int shift = 0; shift < 32; shift += 8) {
+            int sum = 4 * ((center >>> shift) & 255)
+                    + ((l >>> shift) & 255) + ((r >>> shift) & 255)
+                    + ((d >>> shift) & 255) + ((u >>> shift) & 255);
+            result |= (sum / weight) << shift;
+        }
+        return result;
+    }
+
+    private static int colorDistSq(int a, int b) {
+        int da = (a >>> 24) - (b >>> 24);
+        int dr = ((a >>> 16) & 255) - ((b >>> 16) & 255);
+        int dg = ((a >>> 8) & 255) - ((b >>> 8) & 255);
+        int db = (a & 255) - (b & 255);
+        return da * da + dr * dr + dg * dg + db * db;
+    }
+
     private static final class GlassModel extends WrapperBlockStateModel {
         private final GlassSurface.Cache surfaces;
         private static final ThreadLocal<Samples> SAMPLES = ThreadLocal.withInitial(Samples::new);
@@ -260,6 +281,15 @@ public class GradientGlass implements ClientModInitializer {
                                 : average(center, h, side, diagonal);
                     }
                 }
+                // Smooth the center vertex only when both horizontal and vertical neighbors vary,
+                // eliminating diagonal stripe sawtooth while preserving 0.5.1 single-axis quad merging.
+                int hLeft = samples.get(view, pos, right, -1), hRight = samples.get(view, pos, right, 1);
+                int vDown = samples.get(view, pos, up, -1), vUp = samples.get(view, pos, up, 1);
+                boolean variesH = (hLeft != 0 && hLeft != center) || (hRight != 0 && hRight != center);
+                boolean variesV = (vDown != 0 && vDown != center) || (vUp != 0 && vUp != center);
+                if (variesH && variesV) {
+                    grid[4] = smoothCenter(center, hLeft, hRight, vDown, vUp);
+                }
                 GlassSurface surface = textures.blocks[GlassCtmAtlas.tile(mask & ~folds, diagonals)];
                 // The face uses one sprite per layer. Equal ARGB along an axis also
                 // guarantees equal alpha and tint on both CTM layers along that axis.
@@ -279,9 +309,25 @@ public class GradientGlass implements ClientModInitializer {
                             int c2 = surface.tint(grid[i + width], layer), c3 = surface.tint(grid[top + width], layer);
                             if (((c0 | c1 | c2 | c3) >>> 24) == 0) continue;
                             out.square(face, l, b, r, t, 0);
-                            out.uv(0, l, 1-t).uv(1, l, 1-b).uv(2, r, 1-b).uv(3, r, 1-t);
-                            out.spriteBake(surface.sprite(layer), QuadEmitter.BAKE_NORMALIZED);
-                            out.color(c0, c1, c2, c3);
+                            boolean flip = false;
+                            if (width == 1 && height == 1) {
+                                int d1 = colorDistSq(c0, c2), d2 = colorDistSq(c1, c3);
+                                flip = d2 < d1 || (d2 == d1 && ((x == 0 && y == 1) || (x == 1 && y == 0)));
+                            }
+                            if (!flip) {
+                                out.uv(0, l, 1 - t).uv(1, l, 1 - b).uv(2, r, 1 - b).uv(3, r, 1 - t);
+                                out.spriteBake(surface.sprite(layer), QuadEmitter.BAKE_NORMALIZED);
+                                out.color(c0, c1, c2, c3);
+                            } else {
+                                float x0 = out.x(0), y0 = out.y(0), z0 = out.z(0);
+                                float x1 = out.x(1), y1 = out.y(1), z1 = out.z(1);
+                                float x2 = out.x(2), y2 = out.y(2), z2 = out.z(2);
+                                float x3 = out.x(3), y3 = out.y(3), z3 = out.z(3);
+                                out.pos(0, x1, y1, z1).pos(1, x2, y2, z2).pos(2, x3, y3, z3).pos(3, x0, y0, z0);
+                                out.uv(0, l, 1 - b).uv(1, r, 1 - b).uv(2, r, 1 - t).uv(3, l, 1 - t);
+                                out.spriteBake(surface.sprite(layer), QuadEmitter.BAKE_NORMALIZED);
+                                out.color(c1, c2, c3, c0);
+                            }
                             out.renderLayer(BlockRenderLayer.TRANSLUCENT).emit();
                         }
                     }
