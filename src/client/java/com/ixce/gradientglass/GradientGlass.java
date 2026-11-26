@@ -25,11 +25,22 @@ public class GradientGlass implements ClientModInitializer {
     static final Identifier[] CLEAR_TEXTURES = new Identifier[16];
     static final Identifier[] TEXTURES = new Identifier[16];
     private static final Direction[] FACES = Direction.values();
+    private static final float[] SRGB_TO_LINEAR = new float[256];
+    private static final int[] LINEAR_TO_SRGB = new int[4097];
 
     static {
         for (int mask = 0; mask < TEXTURES.length; mask++) {
             CLEAR_TEXTURES[mask] = Identifier.of("gradientglass", "block/clear_" + mask);
             TEXTURES[mask] = Identifier.of("gradientglass", "block/glass_" + mask);
+        }
+        for (int i = 0; i < SRGB_TO_LINEAR.length; i++) {
+            double s = i / 255.0;
+            SRGB_TO_LINEAR[i] = (float) (s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4));
+        }
+        for (int i = 0; i < LINEAR_TO_SRGB.length; i++) {
+            double l = i / 4096.0;
+            double s = l <= 0.0031308 ? 12.92 * l : 1.055 * Math.pow(l, 1.0 / 2.4) - 0.055;
+            LINEAR_TO_SRGB[i] = Math.min(255, Math.max(0, (int) Math.round(s * 255.0)));
         }
     }
 
@@ -58,15 +69,42 @@ public class GradientGlass implements ClientModInitializer {
     }
 
     // A zero sample denotes a non-glass neighbor and contributes no weight.
+    // RGB channels are averaged in linear light (IEC 61966-2-1) to avoid dark/muddy midtones.
     static int average(int center, int a, int b, int diagonal) {
-        int count = 1 + (a == 0 ? 0 : 1) + (b == 0 ? 0 : 1) + (diagonal == 0 ? 0 : 1);
-        int result = 0;
-        for (int shift = 0; shift < 32; shift += 8) {
-            int sum = ((center >>> shift) & 255) + ((a >>> shift) & 255)
-                    + ((b >>> shift) & 255) + ((diagonal >>> shift) & 255);
-            result |= (sum / count) << shift;
+        if ((a == 0 || a == center) && (b == 0 || b == center) && (diagonal == 0 || diagonal == center)) {
+            return center;
         }
-        return result;
+        int count = 1;
+        int alpha = center >>> 24;
+        float r = SRGB_TO_LINEAR[(center >>> 16) & 255];
+        float g = SRGB_TO_LINEAR[(center >>> 8) & 255];
+        float bl = SRGB_TO_LINEAR[center & 255];
+        if (a != 0) {
+            count++;
+            alpha += a >>> 24;
+            r += SRGB_TO_LINEAR[(a >>> 16) & 255];
+            g += SRGB_TO_LINEAR[(a >>> 8) & 255];
+            bl += SRGB_TO_LINEAR[a & 255];
+        }
+        if (b != 0) {
+            count++;
+            alpha += b >>> 24;
+            r += SRGB_TO_LINEAR[(b >>> 16) & 255];
+            g += SRGB_TO_LINEAR[(b >>> 8) & 255];
+            bl += SRGB_TO_LINEAR[b & 255];
+        }
+        if (diagonal != 0) {
+            count++;
+            alpha += diagonal >>> 24;
+            r += SRGB_TO_LINEAR[(diagonal >>> 16) & 255];
+            g += SRGB_TO_LINEAR[(diagonal >>> 8) & 255];
+            bl += SRGB_TO_LINEAR[diagonal & 255];
+        }
+        float scale = 4096f / count;
+        return (alpha / count << 24)
+                | (LINEAR_TO_SRGB[Math.min(4096, Math.round(r * scale))] << 16)
+                | (LINEAR_TO_SRGB[Math.min(4096, Math.round(g * scale))] << 8)
+                | LINEAR_TO_SRGB[Math.min(4096, Math.round(bl * scale))];
     }
 
     private static final class GlassModel extends WrapperBlockStateModel {
@@ -150,21 +188,30 @@ public class GradientGlass implements ClientModInitializer {
 
             int foldCorner(BlockRenderView view, BlockPos pos, int normal, int h, int v) {
                 // Each choice of side along the three axes addresses one distinct block.
-                int count = 0, alpha = 0, red = 0, green = 0, blue = 0;
+                int count = 0, first = 0, alpha = 0;
+                boolean uniform = true;
+                float red = 0f, green = 0f, blue = 0f;
                 for (int depth = 0; depth <= 1; depth++) {
                     for (int y = 0; y <= 1; y++) {
                         for (int x = 0; x <= 1; x++) {
                             int sample = getOffset(view, pos, depth * normal + x * h + y * v);
                             if (sample == 0) continue;
+                            if (count == 0) first = sample;
+                            else if (sample != first) uniform = false;
                             count++;
                             alpha += sample >>> 24;
-                            red += (sample >>> 16) & 255;
-                            green += (sample >>> 8) & 255;
-                            blue += sample & 255;
+                            red += SRGB_TO_LINEAR[(sample >>> 16) & 255];
+                            green += SRGB_TO_LINEAR[(sample >>> 8) & 255];
+                            blue += SRGB_TO_LINEAR[sample & 255];
                         }
                     }
                 }
-                return (alpha / count << 24) | (red / count << 16) | (green / count << 8) | (blue / count);
+                if (uniform) return first;
+                float scale = 4096f / count;
+                return (alpha / count << 24)
+                        | (LINEAR_TO_SRGB[Math.min(4096, Math.round(red * scale))] << 16)
+                        | (LINEAR_TO_SRGB[Math.min(4096, Math.round(green * scale))] << 8)
+                        | LINEAR_TO_SRGB[Math.min(4096, Math.round(blue * scale))];
             }
         }
 
