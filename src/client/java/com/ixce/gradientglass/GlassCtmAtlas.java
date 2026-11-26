@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Supplier;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.SpriteContents;
 import net.minecraft.client.texture.SpriteDimensions;
@@ -16,7 +17,11 @@ import net.minecraft.client.texture.atlas.AtlasSource;
 import net.minecraft.client.texture.atlas.AtlasSourceType;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
+//? if >=1.20.2 {
 import net.minecraft.resource.metadata.ResourceMetadata;
+//?} else {
+/*import net.minecraft.client.resource.metadata.AnimationResourceMetadata;*/
+//?}
 import net.minecraft.util.Identifier;
 import org.slf4j.LoggerFactory;
 
@@ -145,6 +150,22 @@ final class GlassCtmAtlas implements AtlasSource {
         return TYPE;
     }
 
+    private static void addSprite(SpriteRegions atlas, Identifier id, Supplier<SpriteContents> supplier) {
+        //? if >=1.20.2 {
+        atlas.add(id, opener -> supplier.get());
+        //?} else {
+        /*atlas.add(id, supplier::get);*/
+        //?}
+    }
+
+    private static SpriteContents makeSprite(Identifier id, int w, int h, NativeImage image) {
+        //? if >=1.20.2 {
+        return new SpriteContents(id, new SpriteDimensions(w, h), image, ResourceMetadata.NONE);
+        //?} else {
+        /*return new SpriteContents(id, new SpriteDimensions(w, h), image, AnimationResourceMetadata.EMPTY);*/
+        //?}
+    }
+
     @Override
     public void load(ResourceManager manager, SpriteRegions atlas) {
         for (int mask = 0; mask < 16; mask++) {
@@ -152,8 +173,8 @@ final class GlassCtmAtlas implements AtlasSource {
             Identifier dstFallback = CLEAR_FALLBACK_IDS[mask];
             Identifier dstFrame = CLEAR_FRAME_IDS[mask];
             manager.getResource(srcId).ifPresent(res -> {
-                atlas.add(dstFallback, opener -> bakeClearVariant(dstFallback, res, 38));
-                atlas.add(dstFrame, opener -> bakeClearVariant(dstFrame, res, 0));
+                addSprite(atlas, dstFallback, () -> bakeClearVariant(dstFallback, res, 38));
+                addSprite(atlas, dstFrame, () -> bakeClearVariant(dstFrame, res, 0));
             });
         }
 
@@ -190,10 +211,10 @@ final class GlassCtmAtlas implements AtlasSource {
                         for (int i = 0; i < 47; i++) {
                             int connections = CONNECTIONS[i];
                             var id = IDS[material][i];
-                            atlas.add(id, opener -> sheet.bake(id, connections));
+                            addSprite(atlas, id, () -> sheet.bake(id, connections));
                             if (material == 1) {
                                 var frameId = STAINED_FRAME_IDS[i];
-                                atlas.add(frameId, opener -> sheet.bakeFrameOnly(frameId, connections, bodyA));
+                                addSprite(atlas, frameId, () -> sheet.bakeFrameOnly(frameId, connections, bodyA));
                             }
                         }
                     } else {
@@ -211,7 +232,7 @@ final class GlassCtmAtlas implements AtlasSource {
                             atlas.add(IDS[material][i], tileRes);
                             if (material == 1) {
                                 var frameId = STAINED_FRAME_IDS[i];
-                                atlas.add(frameId, opener -> bakeStrippedFrame(frameId, tileRes, bodyA));
+                                addSprite(atlas, frameId, () -> bakeStrippedFrame(frameId, tileRes, bodyA));
                             }
                         }
                     }
@@ -233,7 +254,7 @@ final class GlassCtmAtlas implements AtlasSource {
             int qBL = packed % FADE_LEVELS; packed /= FADE_LEVELS;
             int qTL = packed;
             Identifier id = FADE_UNIQUE_IDS[uid];
-            atlas.add(id, opener -> bakeFadeSprite(id, qTL, qBL, qBR, qTR, bodyAlpha));
+            addSprite(atlas, id, () -> bakeFadeSprite(id, qTL, qBL, qBR, qTR, bodyAlpha));
         }
     }
 
@@ -267,7 +288,7 @@ final class GlassCtmAtlas implements AtlasSource {
                     out.setColor(x, y, (newA << 24) | (abgr & 0x00ffffff));
                 }
             }
-            return new SpriteContents(id, new SpriteDimensions(w, h), out, ResourceMetadata.NONE);
+            return makeSprite(id, w, h, out);
         } catch (IOException e) {
             LoggerFactory.getLogger("gradientglass").warn("Failed to bake stained frame {}", id, e);
             return null;
@@ -289,7 +310,7 @@ final class GlassCtmAtlas implements AtlasSource {
                 image.setColor(x, y, (a << 24) | 0x00ffffff);
             }
         }
-        return new SpriteContents(id, new SpriteDimensions(size, size), image, ResourceMetadata.NONE);
+        return makeSprite(id, size, size, image);
     }
 
     private static SpriteContents bakeClearVariant(Identifier id, Resource resource, int bodyAlpha) {
@@ -304,7 +325,7 @@ final class GlassCtmAtlas implements AtlasSource {
                     out.setColor(x, y, (newA << 24) | (abgr & 0x00ffffff));
                 }
             }
-            return new SpriteContents(id, new SpriteDimensions(w, h), out, ResourceMetadata.NONE);
+            return makeSprite(id, w, h, out);
         } catch (IOException e) {
             LoggerFactory.getLogger("gradientglass").warn("Failed to bake clear glass variant {}", id, e);
             return null;
@@ -419,7 +440,7 @@ final class GlassCtmAtlas implements AtlasSource {
                     image.setColor(x, y, pixels[tile][y * size + x]);
                 }
             }
-            return new SpriteContents(id, new SpriteDimensions(size, size), image, ResourceMetadata.NONE);
+            return makeSprite(id, size, size, image);
         }
 
         SpriteContents bakeFrameOnly(Identifier id, int connections, int bodyAlpha) {
@@ -439,7 +460,7 @@ final class GlassCtmAtlas implements AtlasSource {
                     image.setColor(x, y, (newA << 24) | (abgr & 0x00ffffff));
                 }
             }
-            return new SpriteContents(id, new SpriteDimensions(size, size), image, ResourceMetadata.NONE);
+            return makeSprite(id, size, size, image);
         }
     }
 }
