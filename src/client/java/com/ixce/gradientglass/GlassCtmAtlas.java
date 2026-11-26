@@ -16,7 +16,6 @@ import net.minecraft.client.resources.metadata.animation.FrameSize;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.ResourceMetadata;
 import org.slf4j.LoggerFactory;
 
 final class GlassCtmAtlas implements SpriteSource {
@@ -106,7 +105,7 @@ final class GlassCtmAtlas implements SpriteSource {
                 image.setPixel(x, y, argb);
             }
         }
-        return new SpriteContents(id, new FrameSize(16, 16), image, ResourceMetadata.EMPTY);
+        return new SpriteContents(id, new FrameSize(16, 16), image);
     }
 
     private static final Set<String> SUPPORTED = Set.of(
@@ -200,7 +199,7 @@ final class GlassCtmAtlas implements SpriteSource {
                     image.setPixel(x, y, pixels[tile][y * size + x]);
                 }
             }
-            return new SpriteContents(id, new FrameSize(size, size), image, ResourceMetadata.EMPTY);
+            return new SpriteContents(id, new FrameSize(size, size), image);
         }
     }
 }

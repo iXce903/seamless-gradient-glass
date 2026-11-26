@@ -5,17 +5,17 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelModifier;
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
-import net.fabricmc.fabric.api.client.rendering.v1.AtlasSourceRegistry;
-import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
-import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
-import net.fabricmc.fabric.api.renderer.v1.mesh.QuadTransform;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.fabricmc.fabric.api.client.rendering.v1.SpriteSourceRegistry;
+import net.fabricmc.fabric.api.client.renderer.v1.mesh.MutableQuadView;
+import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
+import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadTransform;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.StainedGlassBlock;
@@ -46,7 +46,7 @@ public class GradientGlass implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        AtlasSourceRegistry.register(Identifier.fromNamespaceAndPath("gradientglass", "clear_glass"), GlassCtmAtlas.CODEC);
+        SpriteSourceRegistry.register(Identifier.fromNamespaceAndPath("gradientglass", "clear_glass"), GlassCtmAtlas.CODEC);
         ModelLoadingPlugin.register(context -> {
             var surfaces = new GlassSurface.Cache();
             var event = context.modifyBlockModelAfterBake();
@@ -356,7 +356,7 @@ public class GradientGlass implements ClientModInitializer {
                             }
                             if (!flip) {
                                 out.uv(0, l, 1 - t).uv(1, l, 1 - b).uv(2, r, 1 - b).uv(3, r, 1 - t);
-                                out.spriteBake(surface.sprite(layer), QuadEmitter.BAKE_NORMALIZED);
+                                out.materialBake(surface.material(layer), QuadEmitter.BAKE_NORMALIZED);
                                 out.color(c0, c1, c2, c3);
                             } else {
                                 float x0 = out.x(0), y0 = out.y(0), z0 = out.z(0);
@@ -365,7 +365,7 @@ public class GradientGlass implements ClientModInitializer {
                                 float x3 = out.x(3), y3 = out.y(3), z3 = out.z(3);
                                 out.pos(0, x1, y1, z1).pos(1, x2, y2, z2).pos(2, x3, y3, z3).pos(3, x0, y0, z0);
                                 out.uv(0, l, 1 - b).uv(1, r, 1 - b).uv(2, r, 1 - t).uv(3, l, 1 - t);
-                                out.spriteBake(surface.sprite(layer), QuadEmitter.BAKE_NORMALIZED);
+                                out.materialBake(surface.material(layer), QuadEmitter.BAKE_NORMALIZED);
                                 out.color(c1, c2, c3, c0);
                             }
                             out.chunkLayer(ChunkSectionLayer.TRANSLUCENT).emit();

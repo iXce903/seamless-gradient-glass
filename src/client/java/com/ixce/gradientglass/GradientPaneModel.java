@@ -2,14 +2,14 @@ package com.ixce.gradientglass;
 
 import java.util.function.Predicate;
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
-import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CrossCollisionBlock;
 import net.minecraft.world.level.block.StainedGlassPaneBlock;
@@ -122,29 +122,29 @@ final class GradientPaneModel extends WrapperBlockStateModel {
                     boolean endFace = face == arm || (arm == null && !hasPart(state, face.getClockWise())
                             && !hasPart(state, face.getCounterClockWise()));
                     var material = surface.clear() != null && endFace ? cap : surface;
-                    out.spriteBake(material.sprite(layer), QuadEmitter.BAKE_NORMALIZED);
+                    out.materialBake(material.material(layer), QuadEmitter.BAKE_NORMALIZED);
                     paint(out, inner, outer, surface, layer);
                 }
             }
             if (!top && (color(above) != 0 || !cullTest.test(Direction.UP))) {
                 out.square(Direction.UP, x0, 1 - z1, x1, 1 - z0, 0).cullFace(null);
-                capTexture(out, cap.sprite(layer), arm);
+                capTexture(out, cap.material(layer), arm);
                 paint(out, inner, outer, surface, layer);
             }
             if (!bottom && (color(below) != 0 || !cullTest.test(Direction.DOWN))) {
                 out.square(Direction.DOWN, x0, z0, x1, z1, 0).cullFace(null);
-                capTexture(out, cap.sprite(layer), arm);
+                capTexture(out, cap.material(layer), arm);
                 paint(out, inner, outer, surface, layer);
             }
         }
     }
 
-    private static void capTexture(QuadEmitter out, TextureAtlasSprite sprite, Direction arm) {
+    private static void capTexture(QuadEmitter out, Material.Baked material, Direction arm) {
         boolean alongX = arm == Direction.EAST || arm == Direction.WEST;
         for (int i = 0; i < 4; i++) {
             out.uv(i, alongX ? out.z(i) : out.x(i), alongX ? out.x(i) : out.z(i));
         }
-        out.spriteBake(sprite, QuadEmitter.BAKE_NORMALIZED);
+        out.materialBake(material, QuadEmitter.BAKE_NORMALIZED);
     }
 
     private static boolean visible(int[] inner, int[] outer, GlassSurface surface, int layer) {

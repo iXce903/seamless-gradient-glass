@@ -3,9 +3,10 @@ package com.ixce.gradientglass;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.resources.Identifier;
 
-record GlassSurface(TextureAtlasSprite clear, TextureAtlasSprite stained) {
+record GlassSurface(Material.Baked clear, Material.Baked stained) {
     static final class Cache {
         private volatile Textures textures;
 
@@ -37,21 +38,26 @@ record GlassSurface(TextureAtlasSprite clear, TextureAtlasSprite stained) {
                 }
                 panes[mask] = resolve(atlas, mask, GlassCtmAtlas.tile(mask, 255), true);
             }
-            cap = new GlassSurface(atlas.getSprite(Identifier.withDefaultNamespace("block/glass_pane_top")),
-                    atlas.getSprite(Identifier.withDefaultNamespace("block/white_stained_glass_pane_top")));
+            cap = new GlassSurface(
+                    baked(atlas.getSprite(Identifier.withDefaultNamespace("block/glass_pane_top"))),
+                    baked(atlas.getSprite(Identifier.withDefaultNamespace("block/white_stained_glass_pane_top"))));
         }
+    }
+
+    private static Material.Baked baked(TextureAtlasSprite sprite) {
+        return sprite == null ? null : new Material.Baked(sprite, true);
     }
 
     private static GlassSurface resolve(TextureAtlas atlas, int mask, int tile, boolean pane) {
         TextureAtlasSprite clear = find(atlas, tile, 0, pane);
         TextureAtlasSprite stained = find(atlas, tile, 1, pane);
         if (clear == null && stained == null) {
-            return new GlassSurface(pane ? null : atlas.getSprite(GradientGlass.CLEAR_TEXTURES[mask]),
-                    atlas.getSprite(GradientGlass.TEXTURES[mask]));
+            return new GlassSurface(pane ? null : baked(atlas.getSprite(GradientGlass.CLEAR_TEXTURES[mask])),
+                    baked(atlas.getSprite(GradientGlass.TEXTURES[mask])));
         }
         if (clear == null) clear = atlas.getSprite(Identifier.withDefaultNamespace("block/glass"));
         if (stained == null) stained = atlas.getSprite(GradientGlass.TEXTURES[mask]);
-        return new GlassSurface(clear, stained);
+        return new GlassSurface(baked(clear), baked(stained));
     }
 
     private static TextureAtlasSprite find(TextureAtlas atlas, int tile, int material, boolean pane) {
@@ -65,7 +71,7 @@ record GlassSurface(TextureAtlasSprite clear, TextureAtlasSprite stained) {
         return sprite.contents().name().equals(id) ? sprite : null;
     }
 
-    TextureAtlasSprite sprite(int layer) {
+    Material.Baked material(int layer) {
         return layer == 0 ? clear : stained;
     }
 
