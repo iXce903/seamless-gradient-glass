@@ -1,15 +1,11 @@
 package com.ixce.gradientglass;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.SpriteAtlasTexture;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.resources.Identifier;
 
-// When a CTM pack is active, crossfade its ordinary and white glass materials.
-// In the existing vertex grid ordinary glass has alpha 85, all dyes have alpha 255.
-record GlassSurface(Sprite clear, Sprite stained) {
-    // One cache shared by all wrappers from a single model reload. Resolve only
-    // after baking, when the stitched block atlas is installed.
+record GlassSurface(TextureAtlasSprite clear, TextureAtlasSprite stained) {
     static final class Cache {
         private volatile Textures textures;
 
@@ -19,8 +15,10 @@ record GlassSurface(Sprite clear, Sprite stained) {
         }
 
         private synchronized Textures initialize() {
-            if (textures == null) textures = new Textures(MinecraftClient.getInstance()
-                    .getBakedModelManager().getAtlas(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
+            if (textures == null) {
+                textures = new Textures(Minecraft.getInstance()
+                        .getAtlasManager().getAtlasOrThrow(TextureAtlas.LOCATION_BLOCKS));
+            }
             return textures;
         }
     }
@@ -30,7 +28,7 @@ record GlassSurface(Sprite clear, Sprite stained) {
         final GlassSurface[] panes = new GlassSurface[16];
         final GlassSurface cap;
 
-        Textures(SpriteAtlasTexture atlas) {
+        Textures(TextureAtlas atlas) {
             for (int mask = 0; mask < 16; mask++) {
                 for (int diagonals = 0; diagonals <= 170; diagonals++) {
                     if ((diagonals & ~170) != 0) continue;
@@ -39,35 +37,35 @@ record GlassSurface(Sprite clear, Sprite stained) {
                 }
                 panes[mask] = resolve(atlas, mask, GlassCtmAtlas.tile(mask, 255), true);
             }
-            cap = new GlassSurface(atlas.getSprite(Identifier.ofVanilla("block/glass_pane_top")),
-                    atlas.getSprite(Identifier.ofVanilla("block/white_stained_glass_pane_top")));
+            cap = new GlassSurface(atlas.getSprite(Identifier.withDefaultNamespace("block/glass_pane_top")),
+                    atlas.getSprite(Identifier.withDefaultNamespace("block/white_stained_glass_pane_top")));
         }
     }
 
-    private static GlassSurface resolve(SpriteAtlasTexture atlas, int mask, int tile, boolean pane) {
-        Sprite clear = find(atlas, tile, 0, pane);
-        Sprite stained = find(atlas, tile, 1, pane);
+    private static GlassSurface resolve(TextureAtlas atlas, int mask, int tile, boolean pane) {
+        TextureAtlasSprite clear = find(atlas, tile, 0, pane);
+        TextureAtlasSprite stained = find(atlas, tile, 1, pane);
         if (clear == null && stained == null) {
             return new GlassSurface(pane ? null : atlas.getSprite(GradientGlass.CLEAR_TEXTURES[mask]),
                     atlas.getSprite(GradientGlass.TEXTURES[mask]));
         }
-        if (clear == null) clear = atlas.getSprite(Identifier.ofVanilla("block/glass"));
+        if (clear == null) clear = atlas.getSprite(Identifier.withDefaultNamespace("block/glass"));
         if (stained == null) stained = atlas.getSprite(GradientGlass.TEXTURES[mask]);
         return new GlassSurface(clear, stained);
     }
 
-    private static Sprite find(SpriteAtlasTexture atlas, int tile, int material, boolean pane) {
+    private static TextureAtlasSprite find(TextureAtlas atlas, int tile, int material, boolean pane) {
         if (pane) {
             Identifier id = GlassCtmAtlas.IDS[material + 2][tile];
             var sprite = atlas.getSprite(id);
-            if (sprite.getContents().getId().equals(id)) return sprite;
+            if (sprite.contents().name().equals(id)) return sprite;
         }
         Identifier id = GlassCtmAtlas.IDS[material][tile];
         var sprite = atlas.getSprite(id);
-        return sprite.getContents().getId().equals(id) ? sprite : null;
+        return sprite.contents().name().equals(id) ? sprite : null;
     }
 
-    Sprite sprite(int layer) {
+    TextureAtlasSprite sprite(int layer) {
         return layer == 0 ? clear : stained;
     }
 

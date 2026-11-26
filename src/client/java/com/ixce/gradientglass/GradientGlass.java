@@ -5,21 +5,21 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelModifier;
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
-import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
-import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
-import net.fabricmc.fabric.api.renderer.v1.mesh.QuadTransform;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.StainedGlassBlock;
-import net.minecraft.client.render.BlockRenderLayer;
-import net.minecraft.client.render.model.BlockStateModel;
 import net.fabricmc.fabric.api.client.rendering.v1.AtlasSourceRegistry;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.BlockRenderView;
+import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadTransform;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.StainedGlassBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class GradientGlass implements ClientModInitializer {
     static final Identifier[] CLEAR_TEXTURES = new Identifier[16];
@@ -30,8 +30,8 @@ public class GradientGlass implements ClientModInitializer {
 
     static {
         for (int mask = 0; mask < TEXTURES.length; mask++) {
-            CLEAR_TEXTURES[mask] = Identifier.of("gradientglass", "block/clear_" + mask);
-            TEXTURES[mask] = Identifier.of("gradientglass", "block/glass_" + mask);
+            CLEAR_TEXTURES[mask] = Identifier.fromNamespaceAndPath("gradientglass", "block/clear_" + mask);
+            TEXTURES[mask] = Identifier.fromNamespaceAndPath("gradientglass", "block/glass_" + mask);
         }
         for (int i = 0; i < SRGB_TO_LINEAR.length; i++) {
             double s = i / 255.0;
@@ -46,11 +46,11 @@ public class GradientGlass implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        AtlasSourceRegistry.register(Identifier.of("gradientglass", "clear_glass"), GlassCtmAtlas.CODEC);
+        AtlasSourceRegistry.register(Identifier.fromNamespaceAndPath("gradientglass", "clear_glass"), GlassCtmAtlas.CODEC);
         ModelLoadingPlugin.register(context -> {
             var surfaces = new GlassSurface.Cache();
             var event = context.modifyBlockModelAfterBake();
-            var phase = Identifier.of("gradientglass", "glass_faces");
+            var phase = Identifier.fromNamespaceAndPath("gradientglass", "glass_faces");
             event.addPhaseOrdering(ModelModifier.WRAP_LAST_PHASE, phase);
             event.register(phase, (model, ctx) -> {
                 if (GradientPaneModel.color(ctx.state()) != 0) return new GradientPaneModel(model, surfaces);
@@ -60,10 +60,10 @@ public class GradientGlass implements ClientModInitializer {
     }
 
     private static int color(BlockState state) {
-        if (state.isOf(Blocks.TINTED_GLASS)) return 0xff272528;
-        if (state.isOf(Blocks.GLASS) || state.isOf(Blocks.BEACON)) return 0x55ffffff;
+        if (state.is(Blocks.TINTED_GLASS)) return 0xff272528;
+        if (state.is(Blocks.GLASS) || state.is(Blocks.BEACON)) return 0x55ffffff;
         if (state.getBlock() instanceof StainedGlassBlock glass) {
-            return 0xff000000 | glass.getColor().getEntityColor();
+            return 0xff000000 | glass.getColor().getTextureDiffuseColor();
         }
         return 0;
     }
@@ -140,8 +140,6 @@ public class GradientGlass implements ClientModInitializer {
         private static final class Samples implements QuadTransform {
             int shellFaces;
 
-            // The vanilla beacon shell occupies the full cube. The core and base
-            // are inset. Keep those baked quads (and their resource-pack textures).
             @Override
             public boolean transform(MutableQuadView quad) {
                 Direction face = quad.lightFace();
@@ -150,7 +148,7 @@ public class GradientGlass implements ClientModInitializer {
                     float x = quad.x(i), y = quad.y(i), z = quad.z(i);
                     if ((x != 0 && x != 1) || (y != 0 && y != 1) || (z != 0 && z != 1)) return true;
                     double depth = face.getAxis().choose((double) x, y, z);
-                    if (depth != (face.getDirection() == Direction.AxisDirection.POSITIVE ? 1 : 0)) return true;
+                    if (depth != (face.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 1 : 0)) return true;
                     int corner = switch (face.getAxis()) {
                         case X -> (int) (2 * y + z);
                         case Y -> (int) (2 * x + z);
@@ -163,17 +161,17 @@ public class GradientGlass implements ClientModInitializer {
                 return false;
             }
 
-            final BlockPos.Mutable cursor = new BlockPos.Mutable();
+            final BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
             final int[] neighbors = new int[27];
             final int[] grid = new int[9];
             int sampled;
 
-            BlockState stateAt(BlockRenderView view, BlockPos pos, int dx, int dy, int dz) {
+            BlockState stateAt(BlockAndTintGetter view, BlockPos pos, int dx, int dy, int dz) {
                 cursor.set(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz);
                 return view.getBlockState(cursor);
             }
 
-            int get(BlockRenderView view, BlockPos pos, int dx, int dy, int dz) {
+            int get(BlockAndTintGetter view, BlockPos pos, int dx, int dy, int dz) {
                 int index = 13 + dx + 3 * dy + 9 * dz;
                 int bit = 1 << index;
                 if ((sampled & bit) == 0) {
@@ -183,28 +181,28 @@ public class GradientGlass implements ClientModInitializer {
                 return neighbors[index];
             }
 
-            int get(BlockRenderView view, BlockPos pos, Direction dir, int sign) {
-                return get(view, pos, dir.getOffsetX() * sign, dir.getOffsetY() * sign, dir.getOffsetZ() * sign);
+            int get(BlockAndTintGetter view, BlockPos pos, Direction dir, int sign) {
+                return get(view, pos, dir.getStepX() * sign, dir.getStepY() * sign, dir.getStepZ() * sign);
             }
 
-            int getOffset(BlockRenderView view, BlockPos pos, int offset) {
+            int getOffset(BlockAndTintGetter view, BlockPos pos, int offset) {
                 int index = 13 + offset;
                 if ((sampled & (1 << index)) != 0) return neighbors[index];
                 return get(view, pos, index % 3 - 1, index / 3 % 3 - 1, index / 9 - 1);
             }
 
-            private BlockState stateAtOffset(BlockRenderView view, BlockPos pos, int offset) {
+            private BlockState stateAtOffset(BlockAndTintGetter view, BlockPos pos, int offset) {
                 int index = 13 + offset;
                 return stateAt(view, pos, index % 3 - 1, index / 3 % 3 - 1, index / 9 - 1);
             }
 
-            boolean showsFace(BlockRenderView view, BlockPos pos, int block, int open, Direction face) {
+            boolean showsFace(BlockAndTintGetter view, BlockPos pos, int block, int open, Direction face) {
                 if (getOffset(view, pos, block) == 0) return false;
                 BlockState outside = stateAtOffset(view, pos, open);
-                return outside.isAir() || Block.shouldDrawSide(stateAtOffset(view, pos, block), outside, face);
+                return outside.isAir() || Block.shouldRenderFace(stateAtOffset(view, pos, block), outside, face);
             }
 
-            boolean hasAdjacentFold(BlockRenderView view, BlockPos pos, int normal, int along, int across,
+            boolean hasAdjacentFold(BlockAndTintGetter view, BlockPos pos, int normal, int along, int across,
                                     Direction face, Direction foldedFace) {
                 int outside = normal + along;
                 return getOffset(view, pos, outside) == 0
@@ -212,8 +210,7 @@ public class GradientGlass implements ClientModInitializer {
                         && showsFace(view, pos, outside + across, outside, foldedFace);
             }
 
-            int foldCorner(BlockRenderView view, BlockPos pos, int normal, int h, int v) {
-                // Each choice of side along the three axes addresses one distinct block.
+            int foldCorner(BlockAndTintGetter view, BlockPos pos, int normal, int h, int v) {
                 int count = 0, first = 0, alpha = 0;
                 boolean uniform = true;
                 float red = 0f, green = 0f, blue = 0f;
@@ -247,18 +244,18 @@ public class GradientGlass implements ClientModInitializer {
         }
 
         @Override
-        public Object createGeometryKey(BlockRenderView view, BlockPos pos, BlockState state, Random random) {
-            return null; // Each face depends on the surrounding glass.
+        public Object createGeometryKey(BlockAndTintGetter view, BlockPos pos, BlockState state, RandomSource random) {
+            return null;
         }
 
         @Override
-        public void emitQuads(QuadEmitter out, BlockRenderView view, BlockPos pos, BlockState state,
-                              Random random, Predicate<Direction> cullTest) {
+        public void emitQuads(QuadEmitter out, BlockAndTintGetter view, BlockPos pos, BlockState state,
+                              RandomSource random, Predicate<Direction> cullTest) {
             int center = color(state);
             var textures = surfaces.get();
             var samples = SAMPLES.get();
             int faces = (1 << FACES.length) - 1;
-            if (state.isOf(Blocks.BEACON)) {
+            if (state.is(Blocks.BEACON)) {
                 samples.shellFaces = 0;
                 out.pushTransform(samples);
                 try {
@@ -273,7 +270,6 @@ public class GradientGlass implements ClientModInitializer {
             int[] grid = samples.grid;
             for (Direction face : FACES) {
                 if ((faces & (1 << face.ordinal())) == 0 || cullTest.test(face) || samples.get(view, pos, face, 1) != 0) continue;
-                // Local axes match QuadEmitter.square on all six cube faces.
                 Direction right = switch (face) {
                     case NORTH -> Direction.WEST;
                     case WEST -> Direction.SOUTH;
@@ -288,8 +284,6 @@ public class GradientGlass implements ClientModInitializer {
                 int mask = 0;
                 int diagonals = 0;
                 int normal = offset(face), horizontal = offset(right), vertical = offset(up);
-                // A diagonal glass block across a visible face's edge presents
-                // a perpendicular face toward the same open block.
                 int folds = (samples.showsFace(view, pos, normal - horizontal, normal, right) ? 1 : 0)
                         | (samples.showsFace(view, pos, normal + horizontal, normal, right.getOpposite()) ? 2 : 0)
                         | (samples.showsFace(view, pos, normal - vertical, normal, up) ? 4 : 0)
@@ -309,9 +303,9 @@ public class GradientGlass implements ClientModInitializer {
                     for (int dy : SIGNS) {
                         int side = samples.get(view, pos, up, dy);
                         int diagonal = h == 0 && side == 0 ? 0 :
-                            samples.get(view, pos, right.getOffsetX() * sign + up.getOffsetX() * dy,
-                                    right.getOffsetY() * sign + up.getOffsetY() * dy,
-                                    right.getOffsetZ() * sign + up.getOffsetZ() * dy);
+                                samples.get(view, pos, right.getStepX() * sign + up.getStepX() * dy,
+                                        right.getStepY() * sign + up.getStepY() * dy,
+                                        right.getStepZ() * sign + up.getStepZ() * dy);
                         int cornerV = vertical * dy;
                         int cornerEdges = hBit | (dy < 0 ? 4 : 8);
                         int cornerFolds = folds & cornerEdges;
@@ -323,8 +317,6 @@ public class GradientGlass implements ClientModInitializer {
                                     || (side != 0 && samples.hasAdjacentFold(view, pos, normal, cornerV, hOffset,
                                     face, sign < 0 ? right : right.getOpposite()));
                         }
-                        // At a fold, the corner joins through the visible surface.
-                        // Two perpendicular folds meet across the same open block.
                         boolean connected = cornerFolds == 0 ? diagonal != 0
                                 : cornerFolds == cornerEdges || continues;
                         if (connected) diagonals |= dy < 0 ? (sign < 0 ? 2 : 8) : (sign < 0 ? 128 : 32);
@@ -333,8 +325,6 @@ public class GradientGlass implements ClientModInitializer {
                                 : average(center, h, side, diagonal);
                     }
                 }
-                // Smooth the center vertex only when both horizontal and vertical neighbors vary,
-                // eliminating diagonal stripe sawtooth while preserving 0.5.1 single-axis quad merging.
                 int hLeft = samples.get(view, pos, right, -1), hRight = samples.get(view, pos, right, 1);
                 int vDown = samples.get(view, pos, up, -1), vUp = samples.get(view, pos, up, 1);
                 boolean variesH = (hLeft != 0 && hLeft != center) || (hRight != 0 && hRight != center);
@@ -343,8 +333,6 @@ public class GradientGlass implements ClientModInitializer {
                     grid[4] = smoothCenter(center, hLeft, hRight, vDown, vUp);
                 }
                 GlassSurface surface = textures.blocks[GlassCtmAtlas.tile(mask & ~folds, diagonals)];
-                // The face uses one sprite per layer. Equal ARGB along an axis also
-                // guarantees equal alpha and tint on both CTM layers along that axis.
                 int width = grid[0] == grid[1] && grid[1] == grid[2]
                         && grid[3] == grid[4] && grid[4] == grid[5]
                         && grid[6] == grid[7] && grid[7] == grid[8] ? 2 : 1;
@@ -380,7 +368,7 @@ public class GradientGlass implements ClientModInitializer {
                                 out.spriteBake(surface.sprite(layer), QuadEmitter.BAKE_NORMALIZED);
                                 out.color(c1, c2, c3, c0);
                             }
-                            out.renderLayer(BlockRenderLayer.TRANSLUCENT).emit();
+                            out.chunkLayer(ChunkSectionLayer.TRANSLUCENT).emit();
                         }
                     }
                 }
@@ -388,12 +376,9 @@ public class GradientGlass implements ClientModInitializer {
         }
 
         private static int offset(Direction direction) {
-            return direction.getOffsetX() + 3 * direction.getOffsetY() + 9 * direction.getOffsetZ();
+            return direction.getStepX() + 3 * direction.getStepY() + 9 * direction.getStepZ();
         }
 
         private static final int[] SIGNS = {-1, 1};
     }
 }
-
-
-

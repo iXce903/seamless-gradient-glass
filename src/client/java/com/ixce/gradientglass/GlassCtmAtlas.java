@@ -1,25 +1,25 @@
 package com.ixce.gradientglass;
 
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.serialization.MapCodec;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Set;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.SpriteContents;
-import net.minecraft.client.texture.SpriteDimensions;
-import net.minecraft.client.texture.atlas.AtlasSource;
-import net.minecraft.resource.Resource;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.metadata.ResourceMetadata;
-import net.minecraft.util.Identifier;
+import java.util.Set;
+import net.minecraft.client.renderer.texture.SpriteContents;
+import net.minecraft.client.renderer.texture.atlas.SpriteSource;
+import net.minecraft.client.resources.metadata.animation.FrameSize;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.ResourceMetadata;
 import org.slf4j.LoggerFactory;
 
-final class GlassCtmAtlas implements AtlasSource {
+final class GlassCtmAtlas implements SpriteSource {
     static final MapCodec<GlassCtmAtlas> CODEC = MapCodec.unit(new GlassCtmAtlas());
     // Standard CTM tile order. Bits circle the face from left to bottom to right to top.
     private static final int[] CONNECTIONS = {0,16,17,1,20,5,84,21,117,93,215,245,4,28,31,7,
@@ -31,7 +31,7 @@ final class GlassCtmAtlas implements AtlasSource {
         for (int tile = 0; tile < CONNECTIONS.length; tile++) {
             TILE[CONNECTIONS[tile]] = tile;
             for (int material = 0; material < IDS.length; material++)
-                IDS[material][tile] = Identifier.of("gradientglass", "block/ctm_" + material + "_" + tile);
+                IDS[material][tile] = Identifier.fromNamespaceAndPath("gradientglass", "block/ctm_" + material + "_" + tile);
         }
     }
 
@@ -43,26 +43,25 @@ final class GlassCtmAtlas implements AtlasSource {
     }
 
     @Override
-    public MapCodec<GlassCtmAtlas> getCodec() { return CODEC; }
+    public MapCodec<GlassCtmAtlas> codec() { return CODEC; }
 
     @Override
-    public void load(ResourceManager manager, SpriteRegions atlas) {
+    public void run(ResourceManager manager, Output atlas) {
         for (int mask = 0; mask < GradientGlass.CLEAR_TEXTURES.length; mask++) {
             final int edges = mask;
             var id = GradientGlass.CLEAR_TEXTURES[mask];
             atlas.add(id, opener -> clearGlass(id, edges));
         }
         Map<String, Integer> priority = new HashMap<>();
-        manager.streamResourcePacks().forEachOrdered(p -> priority.put(p.getId(), priority.size()));
-        var rules = new ArrayList<>(manager.findResources("optifine/ctm", id -> id.getPath().endsWith(".properties")).entrySet());
+        manager.listPacks().forEachOrdered(p -> priority.put(p.packId(), priority.size()));
+        var rules = new ArrayList<>(manager.listResources("optifine/ctm", id -> id.getPath().endsWith(".properties")).entrySet());
         rules.sort(Comparator.<Map.Entry<Identifier, Resource>>comparingInt(e ->
-                priority.getOrDefault(e.getValue().getPackId(), -1)).reversed().thenComparing(Map.Entry::getKey));
+                priority.getOrDefault(e.getValue().sourcePackId(), -1)).reversed().thenComparing(Map.Entry::getKey));
         boolean[] found = new boolean[4];
         String[] blocks = {"glass", "white_stained_glass", "glass_pane", "white_stained_glass_pane"};
         for (var rule : rules) {
-            // Continuity's default pack is the base game style; keep our original fallback for it.
-            if (rule.getValue().getPackId().equals("continuity:default")) continue;
-            try (var stream = rule.getValue().getInputStream()) {
+            if (rule.getValue().sourcePackId().equals("continuity:default")) continue;
+            try (var stream = rule.getValue().open()) {
                 Properties props = new Properties();
                 props.load(stream);
                 String method = props.getProperty("method", "ctm").trim();
@@ -104,10 +103,10 @@ final class GlassCtmAtlas implements AtlasSource {
                 int argb = 0x10e3f5ff;
                 if (reflection) argb = 0xb0deeff4;
                 if (border) argb = x == 0 || y == 0 ? 0xe4c7e6ed : 0xdd83b6c4;
-                image.setColorArgb(x, y, argb);
+                image.setPixel(x, y, argb);
             }
         }
-        return new SpriteContents(id, new SpriteDimensions(16, 16), image, ResourceMetadata.NONE);
+        return new SpriteContents(id, new FrameSize(16, 16), image, ResourceMetadata.EMPTY);
     }
 
     private static final Set<String> SUPPORTED = Set.of(
@@ -178,10 +177,10 @@ final class GlassCtmAtlas implements AtlasSource {
             int[][] pixels = new int[5][];
             int size = 0;
             for (int i = 0; i < 5; i++) {
-                try (var stream = tiles.get(i).getInputStream(); var image = NativeImage.read(stream)) {
+                try (var stream = tiles.get(i).open(); var image = NativeImage.read(stream)) {
                     if (image.getHeight() != image.getWidth() || (i > 0 && image.getWidth() != size)) return null;
                     size = image.getWidth();
-                    pixels[i] = image.copyPixelsArgb();
+                    pixels[i] = image.getPixels();
                 }
             }
             return new Sheet(size, pixels);
@@ -198,11 +197,10 @@ final class GlassCtmAtlas implements AtlasSource {
                     int diagonal = bottom ? (left ? 2 : 8) : (left ? 128 : 32);
                     int tile = horizontal && vertical ? ((connections & diagonal) == 0 ? 4 : 1)
                             : horizontal ? 3 : vertical ? 2 : 0;
-                    image.setColorArgb(x, y, pixels[tile][y * size + x]);
+                    image.setPixel(x, y, pixels[tile][y * size + x]);
                 }
             }
-            return new SpriteContents(id, new SpriteDimensions(size, size), image, ResourceMetadata.NONE);
+            return new SpriteContents(id, new FrameSize(size, size), image, ResourceMetadata.EMPTY);
         }
     }
 }
-

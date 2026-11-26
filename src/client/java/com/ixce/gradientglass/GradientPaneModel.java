@@ -3,22 +3,22 @@ package com.ixce.gradientglass;
 import java.util.function.Predicate;
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.PaneBlock;
-import net.minecraft.block.StainedGlassPaneBlock;
-import net.minecraft.client.render.BlockRenderLayer;
-import net.minecraft.client.render.model.BlockStateModel;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.BlockRenderView;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CrossCollisionBlock;
+import net.minecraft.world.level.block.StainedGlassPaneBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 final class GradientPaneModel extends WrapperBlockStateModel {
     private static final ThreadLocal<Scratch> SCRATCH = ThreadLocal.withInitial(Scratch::new);
     private static final class Scratch {
-        final BlockPos.Mutable cursor = new BlockPos.Mutable();
+        final BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
         final int[] inner = new int[3], outer = new int[3];
     }
 
@@ -32,23 +32,31 @@ final class GradientPaneModel extends WrapperBlockStateModel {
     }
 
     static int color(BlockState state) {
-        if (state.isOf(Blocks.GLASS_PANE)) return 0x55ffffff;
-        if (state.getBlock() instanceof StainedGlassPaneBlock pane) return 0xff000000 | pane.getColor().getEntityColor();
+        if (state.is(Blocks.GLASS_PANE)) return 0x55ffffff;
+        if (state.getBlock() instanceof StainedGlassPaneBlock pane) return 0xff000000 | pane.getColor().getTextureDiffuseColor();
         return 0;
     }
 
     private static boolean hasPart(BlockState state, Direction arm) {
-        return color(state) != 0 && (arm == null || state.get(PaneBlock.FACING_PROPERTIES.get(arm)));
+        if (color(state) == 0) return false;
+        if (arm == null) return true;
+        return switch (arm) {
+            case NORTH -> state.getValue(CrossCollisionBlock.NORTH);
+            case SOUTH -> state.getValue(CrossCollisionBlock.SOUTH);
+            case WEST -> state.getValue(CrossCollisionBlock.WEST);
+            case EAST -> state.getValue(CrossCollisionBlock.EAST);
+            default -> false;
+        };
     }
 
     @Override
-    public Object createGeometryKey(BlockRenderView view, BlockPos pos, BlockState state, Random random) {
+    public Object createGeometryKey(BlockAndTintGetter view, BlockPos pos, BlockState state, RandomSource random) {
         return null;
     }
 
     @Override
-    public void emitQuads(QuadEmitter out, BlockRenderView view, BlockPos pos, BlockState state,
-                          Random random, Predicate<Direction> cullTest) {
+    public void emitQuads(QuadEmitter out, BlockAndTintGetter view, BlockPos pos, BlockState state,
+                          RandomSource random, Predicate<Direction> cullTest) {
         var textures = surfaces.get();
         var scratch = SCRATCH.get();
         var above = view.getBlockState(scratch.cursor.set(pos).move(Direction.UP));
@@ -63,8 +71,7 @@ final class GradientPaneModel extends WrapperBlockStateModel {
         }
     }
 
-    // A vanilla pane is a 2/16-wide post plus one rectangular arm per connection.
-    private static void emitPart(QuadEmitter out, GlassSurface.Textures textures, Scratch scratch, BlockRenderView view, BlockPos pos,
+    private static void emitPart(QuadEmitter out, GlassSurface.Textures textures, Scratch scratch, BlockAndTintGetter view, BlockPos pos,
             BlockState state, BlockState above, BlockState below, Direction arm, Predicate<Direction> cullTest) {
         float x0 = arm == Direction.WEST ? 0 : arm == Direction.EAST ? HI : LO;
         float x1 = arm == Direction.EAST ? 1 : arm == Direction.WEST ? LO : HI;
@@ -102,25 +109,25 @@ final class GradientPaneModel extends WrapperBlockStateModel {
                 if (face == arm && (side != 0 || cullTest.test(face))) continue;
                 float left, right, depth;
                 switch (face) {
-                    case SOUTH -> { left = x0; right = x1; depth = 1-z1; }
-                    case NORTH -> { left = 1-x1; right = 1-x0; depth = z0; }
+                    case SOUTH -> { left = x0; right = x1; depth = 1 - z1; }
+                    case NORTH -> { left = 1 - x1; right = 1 - x0; depth = z0; }
                     case WEST -> { left = z0; right = z1; depth = x0; }
-                    case EAST -> { left = 1-z1; right = 1-z0; depth = 1-x1; }
+                    case EAST -> { left = 1 - z1; right = 1 - z0; depth = 1 - x1; }
                     default -> throw new AssertionError(face);
                 }
                 for (int row = 0; row < 2; row++) {
                     float b = row * .5f, t = b + .5f;
                     out.square(face, left, b, right, t, depth);
-                    out.uv(0, left, 1-t).uv(1, left, 1-b).uv(2, right, 1-b).uv(3, right, 1-t);
-                    boolean endFace = face == arm || (arm == null && !hasPart(state, face.rotateYClockwise())
-                            && !hasPart(state, face.rotateYCounterclockwise()));
+                    out.uv(0, left, 1 - t).uv(1, left, 1 - b).uv(2, right, 1 - b).uv(3, right, 1 - t);
+                    boolean endFace = face == arm || (arm == null && !hasPart(state, face.getClockWise())
+                            && !hasPart(state, face.getCounterClockWise()));
                     var material = surface.clear() != null && endFace ? cap : surface;
                     out.spriteBake(material.sprite(layer), QuadEmitter.BAKE_NORMALIZED);
                     paint(out, inner, outer, surface, layer);
                 }
             }
             if (!top && (color(above) != 0 || !cullTest.test(Direction.UP))) {
-                out.square(Direction.UP, x0, 1-z1, x1, 1-z0, 0).cullFace(null);
+                out.square(Direction.UP, x0, 1 - z1, x1, 1 - z0, 0).cullFace(null);
                 capTexture(out, cap.sprite(layer), arm);
                 paint(out, inner, outer, surface, layer);
             }
@@ -132,7 +139,7 @@ final class GradientPaneModel extends WrapperBlockStateModel {
         }
     }
 
-    private static void capTexture(QuadEmitter out, Sprite sprite, Direction arm) {
+    private static void capTexture(QuadEmitter out, TextureAtlasSprite sprite, Direction arm) {
         boolean alongX = arm == Direction.EAST || arm == Direction.WEST;
         for (int i = 0; i < 4; i++) {
             out.uv(i, alongX ? out.z(i) : out.x(i), alongX ? out.x(i) : out.z(i));
@@ -153,8 +160,6 @@ final class GradientPaneModel extends WrapperBlockStateModel {
             int[] column = x == 0 || x == 1 || z == 0 || z == 1 ? outer : inner;
             out.color(i, surface.tint(column[Math.round(out.y(i) * 2)], layer));
         }
-        out.renderLayer(BlockRenderLayer.TRANSLUCENT).emit();
+        out.chunkLayer(ChunkSectionLayer.TRANSLUCENT).emit();
     }
 }
-
-
