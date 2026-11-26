@@ -2,8 +2,8 @@
   "required": true,
   "refmap": "client-seamless-gradient-glass-refmap.json",
   "package": "com.ixce.gradientglass.mixin",
-  "compatibilityLevel": "JAVA_21",
-  "client": ["BeaconRendererMixin"],
+  "compatibilityLevel": "JAVA_17",
+  "client": ["BeaconRendererMixin", "AtlasSourceManagerAccessor"],
   "injectors": { "defaultRequire": 1 }
 }
 

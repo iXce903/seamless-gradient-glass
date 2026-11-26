@@ -1,9 +1,21 @@
 pluginManagement {
     repositories {
         maven { url = 'https://maven.fabricmc.net/' }
+        maven { url = 'https://maven.kikugie.dev/releases' }
         gradlePluginPortal()
         mavenCentral()
     }
 }
 
+plugins {
+    id 'dev.kikugie.stonecutter' version '0.9.6'
+}
+
 rootProject.name = 'seamless-gradient-glass'
+
+stonecutter {
+    create(rootProject) {
+        versions('1.19.4', '1.20.1', '1.20.4')
+        vcsVersion = '1.20.4'
+    }
+}
