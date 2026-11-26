@@ -332,7 +332,12 @@ public class GradientGlass implements ClientModInitializer {
             RenderMaterial clearMat = GlassSurface.usesCutout(atlas, false, true) ? cutoutMaterial() : translucent;
 
             for (Direction face : FACES) {
-                if (axial[face.ordinal()] != 0 || context.isFaceCulled(face)) continue;
+                //? if >=1.20.1 {
+                boolean culled = context.isFaceCulled(face);
+                //?} else {
+                /*boolean culled = !Block.shouldDrawSide(state, view, pos, face, cursor.set(pos, face));*/
+                //?}
+                if (axial[face.ordinal()] != 0 || culled) continue;
 
                 // Local axes match QuadEmitter.square on all six cube faces.
                 Direction right = switch (face) {

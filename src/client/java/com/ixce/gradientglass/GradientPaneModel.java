@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.fabricmc.fabric.api.renderer.v1.model.ForwardingBakedModel;
 import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.PaneBlock;
@@ -65,7 +66,11 @@ final class GradientPaneModel extends ForwardingBakedModel {
         }
         boolean clear = state.isOf(Blocks.GLASS_PANE);
         QuadEmitter out = context.getEmitter();
+        //? if >=1.20.1 {
         Predicate<Direction> cullTest = context::isFaceCulled;
+        //?} else {
+        /*Predicate<Direction> cullTest = face -> !Block.shouldDrawSide(state, view, pos, face, pos.offset(face));*/
+        //?}
         var atlas = MinecraftClient.getInstance().getBakedModelManager().getAtlas(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
         RenderMaterial material = GlassSurface.usesCutout(atlas, true, clear)
                 ? GradientGlass.cutoutMaterial()
