@@ -356,16 +356,21 @@ public class GradientGlass implements ClientModInitializer {
                         int i = 3 * y + x, top = i + 3 * height;
                         float l = x * .5f, b = y * .5f, r = (x + width) * .5f, t = (y + height) * .5f;
                         int alpha = (grid[top] & grid[i] & grid[i + width] & grid[top + width]) >>> 24;
+                        int stained0 = surface.tint(grid[top], 1), stained1 = surface.tint(grid[i], 1);
+                        int stained2 = surface.tint(grid[i + width], 1), stained3 = surface.tint(grid[top + width], 1);
+                        // Coplanar layers must share a diagonal to rasterize with matching depth.
+                        boolean flip = false;
+                        if (width == 1 && height == 1) {
+                            int d1 = colorDistSq(stained0, stained2), d2 = colorDistSq(stained1, stained3);
+                            flip = d2 < d1 || (d2 == d1 && ((x == 0 && y == 1) || (x == 1 && y == 0)));
+                        }
                         for (int layer = alpha == 255 || surface.clear() == null ? 1 : 0; layer <= 1; layer++) {
-                            int c0 = surface.tint(grid[top], layer), c1 = surface.tint(grid[i], layer);
-                            int c2 = surface.tint(grid[i + width], layer), c3 = surface.tint(grid[top + width], layer);
+                            int c0 = layer == 0 ? surface.tint(grid[top], 0) : stained0;
+                            int c1 = layer == 0 ? surface.tint(grid[i], 0) : stained1;
+                            int c2 = layer == 0 ? surface.tint(grid[i + width], 0) : stained2;
+                            int c3 = layer == 0 ? surface.tint(grid[top + width], 0) : stained3;
                             if (((c0 | c1 | c2 | c3) >>> 24) == 0) continue;
                             out.square(face, l, b, r, t, 0);
-                            boolean flip = false;
-                            if (width == 1 && height == 1) {
-                                int d1 = colorDistSq(c0, c2), d2 = colorDistSq(c1, c3);
-                                flip = d2 < d1 || (d2 == d1 && ((x == 0 && y == 1) || (x == 1 && y == 0)));
-                            }
                             if (!flip) {
                                 out.uv(0, l, 1 - t).uv(1, l, 1 - b).uv(2, r, 1 - b).uv(3, r, 1 - t);
                                 out.spriteBake(surface.sprite(layer), QuadEmitter.BAKE_NORMALIZED);
