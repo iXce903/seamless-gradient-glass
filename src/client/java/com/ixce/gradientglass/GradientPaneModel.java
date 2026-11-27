@@ -100,8 +100,10 @@ final class GradientPaneModel extends WrapperBlockStateModel {
         outer[1] = GradientGlass.average(center, side, 0, 0);
         outer[2] = GradientGlass.average(center, up, side, sideUp);
         int mask = (bottom ? 0 : 4) | (top ? 0 : 8);
-        var surface = textures.panes[mask];
-        var cap = surface.clear() == null ? textures.panes[0] : textures.cap;
+        int dye = GlassSurface.stainedMaterial(center, down, up, side, 0);
+        if (dye >= textures.panes.length) dye = GlassCtmAtlas.WHITE;
+        var surface = textures.panes[dye][mask];
+        var cap = surface.clear() == null ? textures.panes[dye][0] : textures.caps[dye];
         for (int layer = surface.clear() == null ? 1 : 0; layer <= 1; layer++) {
             if (!visible(inner, outer, surface, layer)) continue;
             for (Direction face : HORIZONTAL) {

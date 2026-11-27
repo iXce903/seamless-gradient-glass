@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public class GradientGlass implements ClientModInitializer {
     static final Identifier[] CLEAR_TEXTURES = new Identifier[16];
     static final Identifier[] TEXTURES = new Identifier[16];
+    static final int TINTED_COLOR = 0xff272528;
     private static final Direction[] FACES = Direction.values();
     private static final float[] SRGB_TO_LINEAR = new float[256];
     private static final int[] LINEAR_TO_SRGB = new int[4097];
@@ -60,7 +61,7 @@ public class GradientGlass implements ClientModInitializer {
     }
 
     private static int color(BlockState state) {
-        if (state.is(Blocks.TINTED_GLASS)) return 0xff272528;
+        if (state.is(Blocks.TINTED_GLASS)) return TINTED_COLOR;
         if (state.is(Blocks.GLASS) || state.is(Blocks.BEACON)) return 0x55ffffff;
         if (state.getBlock() instanceof StainedGlassBlock glass) {
             return 0xff000000 | glass.getColor().getTextureDiffuseColor();
@@ -332,7 +333,9 @@ public class GradientGlass implements ClientModInitializer {
                 if (variesH && variesV) {
                     grid[4] = smoothCenter(center, hLeft, hRight, vDown, vUp);
                 }
-                GlassSurface surface = textures.blocks[GlassCtmAtlas.tile(mask & ~folds, diagonals)];
+                // Each face keeps its own block's texture; only the color crosses block borders.
+                int material = GlassSurface.stainedMaterial(center, hLeft, hRight, vDown, vUp);
+                GlassSurface surface = textures.blocks[material][GlassCtmAtlas.tile(mask & ~folds, diagonals)];
                 int width = grid[0] == grid[1] && grid[1] == grid[2]
                         && grid[3] == grid[4] && grid[4] == grid[5]
                         && grid[6] == grid[7] && grid[7] == grid[8] ? 2 : 1;
