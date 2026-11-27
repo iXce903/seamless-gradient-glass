@@ -89,11 +89,11 @@ public final class GlassTextures {
     }
 
     public GlassTexture pane(int material, int edges) {
-        return panes[material][edges];
+        return material < panes.length ? panes[material][edges] : blocks[material][Ctm.tile(edges, 255)];
     }
 
     public GlassTexture paneTop(int material) {
-        return paneTops[material];
+        return material < paneTops.length ? paneTops[material] : blocks[material][0];
     }
 
     public float[] color(int material) {
