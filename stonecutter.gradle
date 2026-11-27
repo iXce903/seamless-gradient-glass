@@ -7,3 +7,9 @@ stonecutter.active '26.3'
 stonecutter.tasks {
     order('build')
 }
+
+tasks.register('buildAndCollect') {
+    group = 'build'
+    description = 'Builds every version and collects the jars in build/libs.'
+    dependsOn subprojects.collect { "${it.path}:buildAndCollect" }
+}

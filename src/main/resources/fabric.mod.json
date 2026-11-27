@@ -6,7 +6,7 @@
   "description": "Connected glass with smooth transitions between neighboring dye colors.",
   "environment": "client",
   "entrypoints": { "client": ["com.ixce.gradientglass.GradientGlass"] },
-  "mixins": ["gradientglass.client.mixins.json"],
+  "mixins": ["gradientglass.mixins.json"],
   "custom": {
     "sodium-extra:options": {
       "mixin.optimizations.beacon_beam_rendering": false
