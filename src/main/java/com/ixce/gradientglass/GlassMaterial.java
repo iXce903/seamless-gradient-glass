@@ -6,11 +6,11 @@ import net.minecraft.world.level.block.StainedGlassBlock;
 import net.minecraft.world.level.block.StainedGlassPaneBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
-final class GlassMaterial {
-    static final int NONE = -1, CLEAR = 0, WHITE = 1 + DyeColor.WHITE.ordinal();
-    static final String[] NAMES = new String[DyeColor.values().length + 2];
+public final class GlassMaterial {
+    public static final int NONE = -1, CLEAR = 0, WHITE = 1 + DyeColor.WHITE.ordinal();
+    public static final String[] NAMES = new String[DyeColor.values().length + 2];
     static final int TINTED = NAMES.length - 1;
-    static final int PANES = TINTED;
+    public static final int PANES = TINTED;
 
     static {
         NAMES[CLEAR] = "glass";
@@ -20,14 +20,14 @@ final class GlassMaterial {
 
     private GlassMaterial() {}
 
-    static int of(BlockState state) {
+    public static int of(BlockState state) {
         if (state.is(Blocks.GLASS) || state.is(Blocks.BEACON)) return CLEAR;
         if (state.is(Blocks.TINTED_GLASS)) return TINTED;
         if (state.getBlock() instanceof StainedGlassBlock glass) return 1 + glass.getColor().ordinal();
         return NONE;
     }
 
-    static int ofPane(BlockState state) {
+    public static int ofPane(BlockState state) {
         if (state.is(Blocks.GLASS_PANE)) return CLEAR;
         if (state.getBlock() instanceof StainedGlassPaneBlock pane) return 1 + pane.getColor().ordinal();
         return NONE;

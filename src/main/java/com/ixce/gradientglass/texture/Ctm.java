@@ -11,7 +11,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 
-final class Ctm {
+public final class Ctm {
     // Standard tile order. Bits circle the face from left to bottom to right to top:
     // sides are 1, 4, 16, 64 and the corners between them 2, 8, 32, 128.
     static final int[] CONNECTIONS = {0,16,17,1,20,5,84,21,117,93,215,245,4,28,31,7,
@@ -28,7 +28,7 @@ final class Ctm {
     private Ctm() {}
 
     // edges: 1 left, 2 right, 4 bottom, 8 top, set where the face is not joined.
-    static int tile(int edges, int diagonals) {
+    public static int tile(int edges, int diagonals) {
         int sides = ((edges & 1) == 0 ? 1 : 0) | ((edges & 4) == 0 ? 4 : 0)
                 | ((edges & 2) == 0 ? 16 : 0) | ((edges & 8) == 0 ? 64 : 0);
         // A corner only counts when both sides next to it are joined.

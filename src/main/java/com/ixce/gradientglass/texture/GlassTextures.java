@@ -9,7 +9,7 @@ import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.resources.Identifier;
 
-final class GlassTextures {
+public final class GlassTextures {
     private static final int MATERIALS = GlassMaterial.NAMES.length;
     private final GlassTexture[][] blocks = new GlassTexture[MATERIALS][Ctm.TILES];
     private final GlassTexture[][] panes = new GlassTexture[GlassMaterial.PANES][16];
@@ -17,10 +17,10 @@ final class GlassTextures {
     private final float[][] colors = new float[MATERIALS][];
     private final boolean[][] samePattern = new boolean[MATERIALS][MATERIALS];
 
-    static final class Lazy {
+    public static final class Lazy {
         private volatile GlassTextures textures;
 
-        GlassTextures get() {
+        public GlassTextures get() {
             var current = textures;
             if (current != null) return current;
             synchronized (this) {
@@ -80,23 +80,23 @@ final class GlassTextures {
     }
 
     /** Whether two stained materials show the same pattern, so blending their textures would change nothing. */
-    boolean samePattern(int a, int b) {
+    public boolean samePattern(int a, int b) {
         return samePattern[a][b];
     }
 
-    GlassTexture block(int material, int tile) {
+    public GlassTexture block(int material, int tile) {
         return blocks[material][tile];
     }
 
-    GlassTexture pane(int material, int edges) {
+    public GlassTexture pane(int material, int edges) {
         return panes[material][edges];
     }
 
-    GlassTexture paneTop(int material) {
+    public GlassTexture paneTop(int material) {
         return paneTops[material];
     }
 
-    float[] color(int material) {
+    public float[] color(int material) {
         return colors[material];
     }
 
@@ -104,12 +104,12 @@ final class GlassTextures {
     private static GlassTexture resolve(TextureAtlas atlas, GlassSprites.Loaded loaded, int material, int edges, int tile, boolean pane) {
         boolean[] replaced = loaded.replaced();
         TextureAtlasSprite sprite = ctm(atlas, material, tile, pane);
-        if (sprite == null && replaced[material]) sprite = find(atlas, GlassSprites.PLAIN[material][edges]);
+        if (sprite == null && replaced[material]) sprite = plain(atlas, material, edges);
         if (sprite == null && material != GlassMaterial.CLEAR) {
             sprite = ctm(atlas, GlassMaterial.WHITE, tile, pane);
-            if (sprite == null && replaced[GlassMaterial.WHITE]) sprite = find(atlas, GlassSprites.PLAIN[GlassMaterial.WHITE][edges]);
+            if (sprite == null && replaced[GlassMaterial.WHITE]) sprite = plain(atlas, GlassMaterial.WHITE, edges);
         }
-        if (sprite == null) sprite = find(atlas, GlassSprites.PLAIN[material][edges]);
+        if (sprite == null) sprite = plain(atlas, material, edges);
         if (sprite == null) sprite = vanilla(atlas, GlassMaterial.NAMES[material]);
         return texture(loaded, sprite, material);
     }
@@ -123,6 +123,12 @@ final class GlassTextures {
     private static TextureAtlasSprite ctm(TextureAtlas atlas, int material, int tile, boolean pane) {
         TextureAtlasSprite sprite = pane ? find(atlas, GlassSprites.CTM[MATERIALS + material][tile]) : null;
         return sprite != null ? sprite : find(atlas, GlassSprites.CTM[material][tile]);
+    }
+
+    // A texture larger than the default keeps all its borders, so it only has the version with every border.
+    private static TextureAtlasSprite plain(TextureAtlas atlas, int material, int edges) {
+        var sprite = find(atlas, GlassSprites.PLAIN[material][edges]);
+        return sprite != null ? sprite : find(atlas, GlassSprites.PLAIN[material][15]);
     }
 
     private static TextureAtlasSprite vanilla(TextureAtlas atlas, String name) {

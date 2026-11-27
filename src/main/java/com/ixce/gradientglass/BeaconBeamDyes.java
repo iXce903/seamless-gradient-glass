@@ -19,7 +19,7 @@ public final class BeaconBeamDyes {
     private BeaconBeamDyes() {}
 
     /** The beam color at a position, or 0. */
-    static int color(int x, int y, int z) {
+    public static int color(int x, int y, int z) {
         return COLORS.getOrDefault(BlockPos.asLong(x, y, z), 0);
     }
 

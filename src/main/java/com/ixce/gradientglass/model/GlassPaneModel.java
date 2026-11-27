@@ -17,14 +17,14 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
 
-final class GlassPaneModel extends WrapperBlockStateModel {
+public final class GlassPaneModel extends WrapperBlockStateModel {
     private static final float LO = 7f / 16, HI = 9f / 16;
     private static final Direction[] HORIZONTAL = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
     private static final Direction[] VERTICAL = {Direction.UP, Direction.DOWN};
     private static final ThreadLocal<Field> FIELD = ThreadLocal.withInitial(Field::new);
     private final GlassTextures.Lazy textures;
 
-    GlassPaneModel(BlockStateModel model, GlassTextures.Lazy textures) {
+    public GlassPaneModel(BlockStateModel model, GlassTextures.Lazy textures) {
         super(model);
         this.textures = textures;
     }

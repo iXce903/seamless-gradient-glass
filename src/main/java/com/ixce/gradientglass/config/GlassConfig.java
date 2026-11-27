@@ -15,20 +15,20 @@ public final class GlassConfig {
     private static final Logger LOG = LoggerFactory.getLogger("gradientglass");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("gradientglass.json");
-    static final int MAX_SUBDIVISIONS = 8;
+    public static final int MAX_SUBDIVISIONS = 8;
 
-    static volatile GlassConfig current = new GlassConfig();
+    public static volatile GlassConfig current = new GlassConfig();
 
-    float transitionWidth = 1.5f;
-    int blockSubdivisions = 4;
-    int paneRows = 4;
-    int paneSegments = 2;
-    boolean blur = true;
-    int patternLayers = 2;
+    public float transitionWidth = 1.5f;
+    public int blockSubdivisions = 4;
+    public int paneRows = 4;
+    public int paneSegments = 2;
+    public boolean blur = true;
+    public int patternLayers = 2;
     boolean beaconGradient = true;
     boolean beaconDye = true;
-    float weakChannel = 0.2f;
-    int visibleAlpha = 32;
+    public float weakChannel = 0.2f;
+    public int visibleAlpha = 32;
 
     public static boolean beaconGradient() {
         return current.beaconGradient;
@@ -56,7 +56,7 @@ public final class GlassConfig {
         visibleAlpha = Math.clamp(visibleAlpha, 0, 255);
     }
 
-    static void load() {
+    public static void load() {
         if (!Files.exists(PATH)) return;
         try {
             var config = GSON.fromJson(Files.readString(PATH), GlassConfig.class);

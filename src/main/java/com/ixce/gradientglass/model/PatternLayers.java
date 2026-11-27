@@ -7,8 +7,8 @@ import java.util.Arrays;
 // the bottom and one layer per other material above. Each layer's weight follows the distance
 // to that material, so all of them meet evenly at a border, and the opacities are chosen from
 // the top down so the stack is as opaque as a single texture.
-final class PatternLayers {
-    static final int MAX_OTHERS = 4;
+public final class PatternLayers {
+    public static final int MAX_OTHERS = 4;
     /** [0] is the block's own material. */
     final int[] materials = new int[MAX_OTHERS + 1];
     /** Mean opacity of each layer's texture. */

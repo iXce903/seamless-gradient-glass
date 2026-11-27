@@ -22,7 +22,7 @@ record Pixels(int size, int[] argb) {
     }
 
     SpriteContents withBorders(Identifier id, int edges) {
-        int border = Math.max(1, size / 16);
+        int border = 1;
         var image = new NativeImage(size, size, false);
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {

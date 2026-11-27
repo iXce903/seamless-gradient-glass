@@ -22,13 +22,13 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
-final class GlassBlockModel extends WrapperBlockStateModel {
+public final class GlassBlockModel extends WrapperBlockStateModel {
     private static final Direction[] FACES = Direction.values();
     private static final int[] SIGNS = {-1, 1};
     private static final ThreadLocal<Sampler> SAMPLER = ThreadLocal.withInitial(Sampler::new);
     private final GlassTextures.Lazy textures;
 
-    GlassBlockModel(BlockStateModel model, GlassTextures.Lazy textures) {
+    public GlassBlockModel(BlockStateModel model, GlassTextures.Lazy textures) {
         super(model);
         this.textures = textures;
     }

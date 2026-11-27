@@ -7,7 +7,7 @@
   "environment": "client",
   "entrypoints": {
     "client": ["com.ixce.gradientglass.GradientGlass"],
-    "modmenu": ["com.ixce.gradientglass.ModMenuIntegration"]
+    "modmenu": ["com.ixce.gradientglass.config.ModMenuIntegration"]
   },
   "mixins": ["gradientglass.mixins.json"],
   "custom": {

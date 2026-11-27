@@ -17,8 +17,8 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-final class GlassSprites implements SpriteSource {
-    static final MapCodec<GlassSprites> CODEC = MapCodec.unit(new GlassSprites());
+public final class GlassSprites implements SpriteSource {
+    public static final MapCodec<GlassSprites> CODEC = MapCodec.unit(new GlassSprites());
     private static final Logger LOG = LoggerFactory.getLogger("gradientglass");
     private static final int MATERIALS = GlassMaterial.NAMES.length;
 
@@ -26,6 +26,8 @@ final class GlassSprites implements SpriteSource {
     static final Identifier[][] CTM = new Identifier[MATERIALS + GlassMaterial.PANES][Ctm.TILES];
     static final Identifier[][] PLAIN = new Identifier[MATERIALS][16];
     static final Identifier[] PANE_TOPS = new Identifier[GlassMaterial.PANES];
+    // Only textures of the vanilla size have their borders covered where glass joins.
+    static final int DEFAULT_SIZE = 16;
 
     record Loaded(Map<Identifier, TextureNormalizer.Tint> tints, int[] averages, boolean[] replaced) {}
 
@@ -87,7 +89,8 @@ final class GlassSprites implements SpriteSource {
                 replaced[material] = !resource.sourcePackId().equals("vanilla");
                 if (replaced[material]) plainPriority[material] = packPriority.getOrDefault(resource.sourcePackId(), -1);
                 var pixels = image;
-                for (int edges = 0; edges < 16; edges++) {
+                // Larger textures may draw their borders at any width, so they keep them.
+                for (int edges = pixels.size() > DEFAULT_SIZE ? 15 : 0; edges < 16; edges++) {
                     var id = PLAIN[material][edges];
                     int kept = edges;
                     atlas.add(id, opener -> pixels.withBorders(id, kept));

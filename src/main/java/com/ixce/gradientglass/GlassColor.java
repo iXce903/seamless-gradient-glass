@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 // {L, a, b, alpha} in OKLab (Ottosson 2020).
-final class GlassColor {
+public final class GlassColor {
     private static final float[] SRGB_TO_LINEAR = new float[256];
     private static final int LINEAR_STEPS = 1 << 14;
     private static final int[] LINEAR_TO_SRGB = new int[LINEAR_STEPS + 1];
@@ -27,7 +27,7 @@ final class GlassColor {
     private GlassColor() {}
 
     // Cached and shared: callers must not modify it.
-    static float[] lab(int argb) {
+    public static float[] lab(int argb) {
         return LAB.computeIfAbsent(argb, GlassColor::toLab);
     }
 
@@ -43,11 +43,11 @@ final class GlassColor {
                 argb >>> 24};
     }
 
-    static int argb(float[] c) {
+    public static int argb(float[] c) {
         return argb(c[0], c[1], c[2], c[3]);
     }
 
-    static int argb(float lightness, float a, float b, float alpha) {
+    public static int argb(float lightness, float a, float b, float alpha) {
         float l = lightness + 0.3963377774f * a + 0.2158037573f * b;
         float m = lightness - 0.1055613458f * a - 0.0638541728f * b;
         float s = lightness - 0.0894841775f * a - 1.2914855480f * b;
@@ -64,7 +64,7 @@ final class GlassColor {
         return LINEAR_TO_SRGB[Math.min(LINEAR_STEPS, Math.max(0, Math.round(linear * LINEAR_STEPS)))];
     }
 
-    static void bernstein(float t, float[] out) {
+    public static void bernstein(float t, float[] out) {
         float u = 1 - t;
         out[0] = u * u;
         out[1] = 2 * u * t;
@@ -72,13 +72,13 @@ final class GlassColor {
     }
 
     // Equal inputs give an exact copy, so uniform faces still merge.
-    static final class Mix {
+    public static final class Mix {
         private final float[] sum = new float[4];
         private float weight;
         private float[] first;
         private boolean uniform;
 
-        Mix clear() {
+        public Mix clear() {
             Arrays.fill(sum, 0);
             weight = 0;
             first = null;
@@ -86,7 +86,7 @@ final class GlassColor {
             return this;
         }
 
-        Mix add(float[] color, float w) {
+        public Mix add(float[] color, float w) {
             if (color == null) return this;
             if (first == null) first = color;
             else if (uniform && color != first && !Arrays.equals(first, color)) uniform = false;
@@ -95,16 +95,16 @@ final class GlassColor {
             return this;
         }
 
-        Mix add(float[] color) {
+        public Mix add(float[] color) {
             return add(color, 1);
         }
 
-        boolean empty() {
+        public boolean empty() {
             return first == null;
         }
 
         /** White when nothing was added. */
-        float[] into(float[] out) {
+        public float[] into(float[] out) {
             if (first == null) System.arraycopy(WHITE, 0, out, 0, 4);
             else if (uniform) System.arraycopy(first, 0, out, 0, 4);
             else for (int i = 0; i < 4; i++) out[i] = sum[i] / weight;
