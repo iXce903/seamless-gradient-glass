@@ -59,6 +59,10 @@ public class GradientGlass implements ClientModInitializer {
         });
     }
 
+    public static boolean isGradientModel(Object model) {
+        return model instanceof GlassModel || model instanceof GradientPaneModel;
+    }
+
     private static int color(BlockState state) {
         if (state.isOf(Blocks.TINTED_GLASS)) return 0xff272528;
         if (state.isOf(Blocks.GLASS) || state.isOf(Blocks.BEACON)) return 0x55ffffff;
