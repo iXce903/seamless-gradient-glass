@@ -14,7 +14,9 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.StainedGlassBlock;
 import net.minecraft.client.render.BlockRenderLayer;
 import net.minecraft.client.render.model.BlockStateModel;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.AtlasSourceRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -46,6 +48,8 @@ public class GradientGlass implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        BlockRenderLayerMap.putBlocks(BlockRenderLayer.TRANSLUCENT, Blocks.GLASS, Blocks.GLASS_PANE);
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> BeaconBeamDyeCache.clearAll());
         AtlasSourceRegistry.register(Identifier.of("gradientglass", "clear_glass"), GlassCtmAtlas.CODEC);
         ModelLoadingPlugin.register(context -> {
             var surfaces = new GlassSurface.Cache();
@@ -61,6 +65,14 @@ public class GradientGlass implements ClientModInitializer {
 
     public static boolean isGradientModel(Object model) {
         return model instanceof GlassModel || model instanceof GradientPaneModel;
+    }
+
+    private static int color(BlockState state, BlockPos pos) {
+        if (state.isOf(Blocks.GLASS)) {
+            int dyed = BeaconBeamDyeCache.getColor(pos);
+            return dyed != 0 ? dyed : 0x55ffffff;
+        }
+        return color(state);
     }
 
     private static int color(BlockState state) {
@@ -181,7 +193,7 @@ public class GradientGlass implements ClientModInitializer {
                 int index = 13 + dx + 3 * dy + 9 * dz;
                 int bit = 1 << index;
                 if ((sampled & bit) == 0) {
-                    neighbors[index] = color(stateAt(view, pos, dx, dy, dz));
+                    neighbors[index] = color(stateAt(view, pos, dx, dy, dz), cursor);
                     sampled |= bit;
                 }
                 return neighbors[index];
@@ -258,7 +270,7 @@ public class GradientGlass implements ClientModInitializer {
         @Override
         public void emitQuads(QuadEmitter out, BlockRenderView view, BlockPos pos, BlockState state,
                               Random random, Predicate<Direction> cullTest) {
-            int center = color(state);
+            int center = color(state, pos);
             var textures = surfaces.get();
             var samples = SAMPLES.get();
             int faces = (1 << FACES.length) - 1;

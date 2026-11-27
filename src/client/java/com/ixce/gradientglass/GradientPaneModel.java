@@ -31,6 +31,14 @@ final class GradientPaneModel extends WrapperBlockStateModel {
         this.surfaces = surfaces;
     }
 
+    static int color(BlockState state, BlockPos pos) {
+        if (state.isOf(Blocks.GLASS_PANE)) {
+            int dyed = BeaconBeamDyeCache.getColor(pos);
+            return dyed != 0 ? dyed : 0x55ffffff;
+        }
+        return color(state);
+    }
+
     static int color(BlockState state) {
         if (state.isOf(Blocks.GLASS_PANE)) return 0x55ffffff;
         if (state.getBlock() instanceof StainedGlassPaneBlock pane) return 0xff000000 | pane.getColor().getEntityColor();
@@ -51,41 +59,45 @@ final class GradientPaneModel extends WrapperBlockStateModel {
                           Random random, Predicate<Direction> cullTest) {
         var textures = surfaces.get();
         var scratch = SCRATCH.get();
-        var above = view.getBlockState(scratch.cursor.set(pos).move(Direction.UP));
-        var below = view.getBlockState(scratch.cursor.set(pos).move(Direction.DOWN));
-        int center = color(state);
-        scratch.inner[0] = GradientGlass.average(center, color(below), 0, 0);
+        var abovePos = scratch.cursor.set(pos).move(Direction.UP);
+        var above = view.getBlockState(abovePos);
+        int aboveColor = color(above, abovePos);
+        var belowPos = scratch.cursor.set(pos).move(Direction.DOWN);
+        var below = view.getBlockState(belowPos);
+        int belowColor = color(below, belowPos);
+        int center = color(state, pos);
+        scratch.inner[0] = GradientGlass.average(center, belowColor, 0, 0);
         scratch.inner[1] = center;
-        scratch.inner[2] = GradientGlass.average(center, color(above), 0, 0);
-        emitPart(out, textures, scratch, view, pos, state, above, below, null, cullTest);
+        scratch.inner[2] = GradientGlass.average(center, aboveColor, 0, 0);
+        emitPart(out, textures, scratch, view, pos, state, above, aboveColor, below, belowColor, null, cullTest);
         for (Direction arm : HORIZONTAL) {
-            if (hasPart(state, arm)) emitPart(out, textures, scratch, view, pos, state, above, below, arm, cullTest);
+            if (hasPart(state, arm)) emitPart(out, textures, scratch, view, pos, state, above, aboveColor, below, belowColor, arm, cullTest);
         }
     }
 
     // A vanilla pane is a 2/16-wide post plus one rectangular arm per connection.
     private static void emitPart(QuadEmitter out, GlassSurface.Textures textures, Scratch scratch, BlockRenderView view, BlockPos pos,
-            BlockState state, BlockState above, BlockState below, Direction arm, Predicate<Direction> cullTest) {
+            BlockState state, BlockState above, int aboveColor, BlockState below, int belowColor, Direction arm, Predicate<Direction> cullTest) {
         float x0 = arm == Direction.WEST ? 0 : arm == Direction.EAST ? HI : LO;
         float x1 = arm == Direction.EAST ? 1 : arm == Direction.WEST ? LO : HI;
         float z0 = arm == Direction.NORTH ? 0 : arm == Direction.SOUTH ? HI : LO;
         float z1 = arm == Direction.SOUTH ? 1 : arm == Direction.NORTH ? LO : HI;
         boolean top = hasPart(above, arm), bottom = hasPart(below, arm);
         int center = scratch.inner[1];
-        int up = top ? color(above) : 0, down = bottom ? color(below) : 0;
+        int up = top ? aboveColor : 0, down = bottom ? belowColor : 0;
         int side = 0, sideUp = 0, sideDown = 0;
         if (arm != null) {
             var next = scratch.cursor.set(pos).move(arm);
             Direction back = arm.getOpposite();
             BlockState neighbor = view.getBlockState(next);
-            if (hasPart(neighbor, back)) side = color(neighbor);
+            if (hasPart(neighbor, back)) side = color(neighbor, next);
             if (top || side != 0) {
                 var upper = view.getBlockState(next.setY(pos.getY() + 1));
-                if (hasPart(upper, back)) sideUp = color(upper);
+                if (hasPart(upper, back)) sideUp = color(upper, next);
             }
             if (bottom || side != 0) {
                 var lower = view.getBlockState(next.setY(pos.getY() - 1));
-                if (hasPart(lower, back)) sideDown = color(lower);
+                if (hasPart(lower, back)) sideDown = color(lower, next);
             }
         }
         int[] inner = scratch.inner, outer = scratch.outer;
@@ -119,12 +131,12 @@ final class GradientPaneModel extends WrapperBlockStateModel {
                     paint(out, inner, outer, surface, layer);
                 }
             }
-            if (!top && (color(above) != 0 || !cullTest.test(Direction.UP))) {
+            if (!top && (aboveColor != 0 || !cullTest.test(Direction.UP))) {
                 out.square(Direction.UP, x0, 1-z1, x1, 1-z0, 0).cullFace(null);
                 capTexture(out, cap.sprite(layer), arm);
                 paint(out, inner, outer, surface, layer);
             }
-            if (!bottom && (color(below) != 0 || !cullTest.test(Direction.DOWN))) {
+            if (!bottom && (belowColor != 0 || !cullTest.test(Direction.DOWN))) {
                 out.square(Direction.DOWN, x0, z0, x1, z1, 0).cullFace(null);
                 capTexture(out, cap.sprite(layer), arm);
                 paint(out, inner, outer, surface, layer);

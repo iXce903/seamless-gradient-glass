@@ -3,7 +3,6 @@
   "refmap": "client-seamless-gradient-glass-refmap.json",
   "package": "com.ixce.gradientglass.mixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["BeaconRendererMixin", "QuickCraftPreviewMixin"],
+  "client": ["BeaconBlockEntityMixin", "BeaconRendererMixin", "QuickCraftPreviewMixin"],
   "injectors": { "defaultRequire": 1 }
 }
-
