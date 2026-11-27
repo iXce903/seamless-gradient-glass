@@ -1,5 +1,6 @@
-package com.ixce.gradientglass;
+package com.ixce.gradientglass.texture;
 
+import com.ixce.gradientglass.GlassMaterial;
 import com.mojang.serialization.MapCodec;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -80,7 +81,7 @@ final class GlassSprites implements SpriteSource {
                     var normalizer = new TextureNormalizer(List.of(image));
                     averages[material] = normalizer.average();
                     image = normalizer.apply(image);
-                    var tint = normalizer.tint(material);
+                    var tint = normalizer.tint(material, image);
                     for (var id : PLAIN[material]) tints.put(id, tint);
                 }
                 replaced[material] = !resource.sourcePackId().equals("vanilla");
@@ -105,7 +106,7 @@ final class GlassSprites implements SpriteSource {
                 var normalizer = new TextureNormalizer(List.of(image));
                 var top = normalizer.apply(image);
                 var id = PANE_TOPS[material];
-                tints.put(id, normalizer.tint(material));
+                tints.put(id, normalizer.tint(material, top));
                 atlas.add(id, opener -> top.sprite(id));
             } catch (IOException | RuntimeException e) {
                 LOG.warn("Could not read pane top {}", GlassMaterial.NAMES[material], e);
@@ -149,7 +150,7 @@ final class GlassSprites implements SpriteSource {
                         }
                         var source = material == GlassMaterial.CLEAR ? images : normalized;
                         if (material != GlassMaterial.CLEAR) {
-                            var tint = normalizer.tint(material);
+                            var tint = normalizer.tint(material, normalized.get(0));
                             for (var id : CTM[slot]) tints.put(id, tint);
                         }
                         if (compact) {

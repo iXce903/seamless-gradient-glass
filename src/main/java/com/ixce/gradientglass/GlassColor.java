@@ -10,7 +10,7 @@ final class GlassColor {
     private static final int LINEAR_STEPS = 1 << 14;
     private static final int[] LINEAR_TO_SRGB = new int[LINEAR_STEPS + 1];
     private static final Map<Integer, float[]> LAB = new ConcurrentHashMap<>();
-    static final float[] TRANSPARENT = {1, 0, 0, 0};
+    static final float[] WHITE = {1, 0, 0, 255};
 
     static {
         for (int i = 0; i < SRGB_TO_LINEAR.length; i++) {
@@ -71,18 +71,16 @@ final class GlassColor {
         out[2] = t * t;
     }
 
-    // Opacity takes the minimum, so stained glass is fully transparent where it meets clear glass.
     // Equal inputs give an exact copy, so uniform faces still merge.
     static final class Mix {
-        private final float[] sum = new float[3];
-        private float weight, opacity;
+        private final float[] sum = new float[4];
+        private float weight;
         private float[] first;
         private boolean uniform;
 
         Mix clear() {
             Arrays.fill(sum, 0);
             weight = 0;
-            opacity = 255;
             first = null;
             uniform = true;
             return this;
@@ -92,9 +90,8 @@ final class GlassColor {
             if (color == null) return this;
             if (first == null) first = color;
             else if (uniform && color != first && !Arrays.equals(first, color)) uniform = false;
-            for (int i = 0; i < 3; i++) sum[i] += w * color[i];
+            for (int i = 0; i < 4; i++) sum[i] += w * color[i];
             weight += w;
-            opacity = Math.min(opacity, color[3]);
             return this;
         }
 
@@ -106,12 +103,11 @@ final class GlassColor {
             return first == null;
         }
 
+        /** White when nothing was added. */
         float[] into(float[] out) {
-            if (uniform) System.arraycopy(first, 0, out, 0, 4);
-            else {
-                for (int i = 0; i < 3; i++) out[i] = sum[i] / weight;
-                out[3] = opacity;
-            }
+            if (first == null) System.arraycopy(WHITE, 0, out, 0, 4);
+            else if (uniform) System.arraycopy(first, 0, out, 0, 4);
+            else for (int i = 0; i < 4; i++) out[i] = sum[i] / weight;
             return out;
         }
     }

@@ -1,5 +1,11 @@
-package com.ixce.gradientglass;
+package com.ixce.gradientglass.model;
 
+import com.ixce.gradientglass.GlassColor;
+import com.ixce.gradientglass.GlassMaterial;
+import com.ixce.gradientglass.config.GlassConfig;
+import com.ixce.gradientglass.texture.Ctm;
+import com.ixce.gradientglass.texture.GlassTexture;
+import com.ixce.gradientglass.texture.GlassTextures;
 import java.util.Arrays;
 import java.util.function.Predicate;
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
@@ -17,8 +23,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 final class GlassBlockModel extends WrapperBlockStateModel {
-    // A face whose color varies along an axis is split into this many quads along it.
-    private static final int SUBDIVISIONS = 4;
     private static final Direction[] FACES = Direction.values();
     private static final int[] SIGNS = {-1, 1};
     private static final ThreadLocal<Sampler> SAMPLER = ThreadLocal.withInitial(Sampler::new);
@@ -51,8 +55,8 @@ final class GlassBlockModel extends WrapperBlockStateModel {
             }
             faces = shell.faces;
         }
-        int material = GlassMaterial.of(state);
-        sampler.begin(view, pos, material, textures.get());
+        sampler.begin(view, pos, textures.get());
+        int material = sampler.get(0, 0, 0);
         for (Direction face : FACES) {
             if ((faces & (1 << face.ordinal())) != 0 && !cullTest.test(face) && sampler.get(face, 1) == GlassMaterial.NONE) {
                 emitFace(out, sampler, material, face);
@@ -111,22 +115,88 @@ final class GlassBlockModel extends WrapperBlockStateModel {
                 else sampler.mean(corner, 0, hOffset, cornerV, h == glass && side == glass ? none : hOffset + cornerV);
             }
         }
-        var texture = sampler.textures.block(material, Ctm.tile(edges & ~folds, diagonals));
-        if (texture.clear()) {
-            emitQuad(out, face, texture, 0, 0, 1, 1, false, -1, -1, -1, -1);
-            return;
-        }
-
-        int[] net = sampler.net, vertex = sampler.vertex;
+        int tile = Ctm.tile(edges & ~folds, diagonals);
+        int subdivisions = GlassConfig.current.blockSubdivisions;
+        var textures = sampler.textures;
+        boolean clear = material == GlassMaterial.CLEAR;
+        int[] net = sampler.net, upper = sampler.upper, lower = sampler.lower;
         for (int k = 0; k < 9; k++) net[k] = GlassColor.argb(grid[k]);
         boolean flatH = net[0] == net[1] && net[1] == net[2] && net[3] == net[4] && net[4] == net[5]
                 && net[6] == net[7] && net[7] == net[8];
         boolean flatV = net[0] == net[3] && net[3] == net[6] && net[1] == net[4] && net[4] == net[7]
                 && net[2] == net[5] && net[5] == net[8];
-        int nx = flatH ? 1 : SUBDIVISIONS, ny = flatV ? 1 : SUBDIVISIONS;
-        for (int y = 0; y <= ny; y++) {
-            for (int x = 0; x <= nx; x++) vertex[y * (nx + 1) + x] = texture.tint(sampler.patch((float) x / nx, (float) y / ny));
+        // The face runs from origin along right (u) and up (v), in block coordinates.
+        float ox = 0.5f + 0.5f * (face.getStepX() - right.getStepX() - up.getStepX());
+        float oy = 0.5f + 0.5f * (face.getStepY() - right.getStepY() - up.getStepY());
+        float oz = 0.5f + 0.5f * (face.getStepZ() - right.getStepZ() - up.getStepZ());
+        int rx = right.getStepX(), ry = right.getStepY(), rz = right.getStepZ();
+        int ux = up.getStepX(), uy = up.getStepY(), uz = up.getStepZ();
+        var fade = sampler.around.fade;
+        boolean fading = fade.reaches(Math.min(ox, ox + rx + ux), Math.min(oy, oy + ry + uy), Math.min(oz, oz + rz + uz),
+                Math.max(ox, ox + rx + ux), Math.max(oy, oy + ry + uy), Math.max(oz, oz + rz + uz));
+        float[] lab = sampler.lab;
+        var own = textures.block(material, tile);
+        float x0 = Math.min(ox, ox + rx + ux), y0 = Math.min(oy, oy + ry + uy), z0 = Math.min(oz, oz + rz + uz);
+        float x1 = Math.max(ox, ox + rx + ux), y1 = Math.max(oy, oy + ry + uy), z1 = Math.max(oz, oz + rz + uz);
+        var layers = sampler.layers;
+        if (!fading) layers.select(sampler.around.patterns, material, GlassConfig.current.patternLayers, x0, y0, z0, x1, y1, z1);
+        boolean blending = !fading && layers.count > 1;
+        if (!fading && !blending) {
+            int nx = flatH ? 1 : subdivisions, ny = flatV ? 1 : subdivisions;
+            for (int y = 0; y <= ny; y++) {
+                for (int x = 0; x <= nx; x++) {
+                    sampler.patch((float) x / nx, (float) y / ny, lab);
+                    upper[y * (nx + 1) + x] = own.shade(lab, 1);
+                }
+            }
+            emitLayer(out, face, own, upper, nx, ny, 0);
+            return;
         }
+        if (!fading) {
+            emitPatternBlend(out, sampler, face, tile, subdivisions, ox, oy, oz, rx, ry, rz, ux, uy, uz);
+            return;
+        }
+        int n = subdivisions;
+        var stained = clear ? textures.block(fade.nearestMaterial(ox + 0.5f * (rx + ux), oy + 0.5f * (ry + uy), oz + 0.5f * (rz + uz)), tile) : own;
+        var underneath = textures.block(GlassMaterial.CLEAR, tile);
+        for (int y = 0; y <= n; y++) {
+            for (int x = 0; x <= n; x++) {
+                float u = (float) x / n, v = (float) y / n;
+                sampler.patch(u, v, lab);
+                float d = fade.distance(ox + u * rx + v * ux, oy + u * ry + v * uy, oz + u * rz + v * uz);
+                int i = y * (n + 1) + x;
+                upper[i] = stained.shade(lab, fade.stained(clear ? -d : d));
+                lower[i] = underneath.shade(lab, clear ? 1 : fade.clearUnder(d));
+            }
+        }
+        emitLayer(out, face, underneath, lower, n, n, GlassFade.LAYER_GAP);
+        emitLayer(out, face, stained, upper, n, n, 0);
+    }
+
+    private static void emitPatternBlend(QuadEmitter out, Sampler sampler, Direction face, int tile, int n,
+                                         float ox, float oy, float oz, int rx, int ry, int rz, int ux, int uy, int uz) {
+        var patterns = sampler.around.patterns;
+        var layers = sampler.layers;
+        var textures = sampler.layerTextures;
+        for (int k = 0; k < layers.count; k++) {
+            textures[k] = sampler.textures.block(layers.materials[k], tile);
+            layers.alphas[k] = textures[k].alpha();
+        }
+        float[] lab = sampler.lab;
+        for (int y = 0; y <= n; y++) {
+            for (int x = 0; x <= n; x++) {
+                float u = (float) x / n, v = (float) y / n;
+                sampler.patch(u, v, lab);
+                layers.opacities(patterns, ox + u * rx + v * ux, oy + u * ry + v * uy, oz + u * rz + v * uz);
+                for (int k = 0; k < layers.count; k++) sampler.layerColors[k][y * (n + 1) + x] = textures[k].shade(lab, layers.opacity[k]);
+            }
+        }
+        for (int k = 0; k < layers.count; k++) {
+            emitLayer(out, face, textures[k], sampler.layerColors[k], n, n, GlassFade.LAYER_GAP * (layers.count - 1 - k));
+        }
+    }
+
+    private static void emitLayer(QuadEmitter out, Direction face, GlassTexture texture, int[] vertex, int nx, int ny, float depth) {
         for (int y = 0; y < ny; y++) {
             for (int x = 0; x < nx; x++) {
                 int i = y * (nx + 1) + x, above = i + nx + 1;
@@ -139,14 +209,14 @@ final class GlassBlockModel extends WrapperBlockStateModel {
                     flip = d2 < d1 || (d2 == d1 && (2 * x < nx) != (2 * y < ny));
                 }
                 float l = (float) x / nx, b = (float) y / ny, r = (float) (x + 1) / nx, t = (float) (y + 1) / ny;
-                emitQuad(out, face, texture, l, b, r, t, flip, c0, c1, c2, c3);
+                emitQuad(out, face, texture, l, b, r, t, depth, flip, c0, c1, c2, c3);
             }
         }
     }
 
-    private static void emitQuad(QuadEmitter out, Direction face, GlassTexture texture,
-                                 float l, float b, float r, float t, boolean flip, int c0, int c1, int c2, int c3) {
-        out.square(face, l, b, r, t, 0);
+    private static void emitQuad(QuadEmitter out, Direction face, GlassTexture texture, float l, float b, float r, float t,
+                                 float depth, boolean flip, int c0, int c1, int c2, int c3) {
+        out.square(face, l, b, r, t, depth);
         if (flip) {
             float x0 = out.x(0), y0 = out.y(0), z0 = out.z(0);
             out.pos(0, out.x(1), out.y(1), out.z(1)).pos(1, out.x(2), out.y(2), out.z(2))
@@ -201,49 +271,26 @@ final class GlassBlockModel extends WrapperBlockStateModel {
     private static final class Sampler {
         static final int NO_OFFSET = Integer.MIN_VALUE;
         final ShellRemover shell = new ShellRemover();
-        private final BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        private BlockAndTintGetter view;
-        private BlockPos pos;
+        final GlassNeighborhood around = new GlassNeighborhood();
+        final float[] lab = new float[3];
         GlassTextures textures;
-        private final int[] materials = new int[125];
-        private final float[][] blurred = new float[27][4];
-        private final float[][] blurredRef = new float[27][];
-        private final int[] materialStamp = new int[125], blurredStamp = new int[27];
-        private int stamp;
-        private final GlassColor.Mix blur = new GlassColor.Mix(), mix = new GlassColor.Mix();
+        private final GlassColor.Mix mix = new GlassColor.Mix();
         final float[][] grid = new float[9][4];
         final int[] net = new int[9];
-        final int[] vertex = new int[(SUBDIVISIONS + 1) * (SUBDIVISIONS + 1)];
+        final int[] upper = new int[(GlassConfig.MAX_SUBDIVISIONS + 1) * (GlassConfig.MAX_SUBDIVISIONS + 1)], lower = new int[upper.length];
+        final PatternLayers layers = new PatternLayers();
+        final GlassTexture[] layerTextures = new GlassTexture[PatternLayers.MAX_OTHERS + 1];
+        final int[][] layerColors = new int[PatternLayers.MAX_OTHERS + 1][upper.length];
         private final float[] wu = new float[3], wv = new float[3];
 
-        void begin(BlockAndTintGetter view, BlockPos pos, int material, GlassTextures textures) {
-            this.view = view;
-            this.pos = pos;
+        void begin(BlockAndTintGetter view, BlockPos pos, GlassTextures textures) {
             this.textures = textures;
-            if (++stamp == 0) {
-                Arrays.fill(materialStamp, 0);
-                Arrays.fill(blurredStamp, 0);
-                stamp = 1;
-            }
-            materials[index(0, 0, 0)] = material;
-            materialStamp[index(0, 0, 0)] = stamp;
+            around.begin(view, pos, textures);
         }
 
-        private static int index(int dx, int dy, int dz) {
-            return (dx + 2) + 5 * (dy + 2) + 25 * (dz + 2);
-        }
-
-        private BlockState state(int dx, int dy, int dz) {
-            return view.getBlockState(cursor.set(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz));
-        }
-
+        /** The material of the glass block at an offset; panes count as NONE here. */
         int get(int dx, int dy, int dz) {
-            int index = index(dx, dy, dz);
-            if (materialStamp[index] != stamp) {
-                materials[index] = GlassMaterial.of(state(dx, dy, dz));
-                materialStamp[index] = stamp;
-            }
-            return materials[index];
+            return around.block(dx, dy, dz);
         }
 
         int get(Direction direction, int sign) {
@@ -257,7 +304,7 @@ final class GlassBlockModel extends WrapperBlockStateModel {
 
         private BlockState stateAtOffset(int offset) {
             int index = 13 + offset;
-            return state(index % 3 - 1, index / 3 % 3 - 1, index / 9 - 1);
+            return around.state(index % 3 - 1, index / 3 % 3 - 1, index / 9 - 1);
         }
 
         boolean showsFace(int block, int open, Direction face) {
@@ -273,33 +320,10 @@ final class GlassBlockModel extends WrapperBlockStateModel {
                     && showsFace(outside + across, outside, foldedFace);
         }
 
-        // The kernel is the same from every side, so faces meeting at a fold agree.
-        float[] blurred(int offset) {
+        private float[] blurred(int offset) {
             int index = 13 + offset;
-            if (blurredStamp[index] == stamp) return blurredRef[index];
             int dx = index % 3 - 1, dy = index / 3 % 3 - 1, dz = index / 9 - 1;
-            int self = get(dx, dy, dz);
-            float[] result = null;
-            if (self != GlassMaterial.NONE) {
-                blur.clear();
-                for (int ez = -1; ez <= 1; ez++) {
-                    for (int ey = -1; ey <= 1; ey++) {
-                        for (int ex = -1; ex <= 1; ex++) {
-                            int material = get(dx + ex, dy + ey, dz + ez);
-                            if (material > GlassMaterial.CLEAR) {
-                                blur.add(textures.color(material), 1 << (3 - Math.abs(ex) - Math.abs(ey) - Math.abs(ez)));
-                            }
-                        }
-                    }
-                }
-                result = blurred[index];
-                if (blur.empty()) System.arraycopy(GlassColor.TRANSPARENT, 0, result, 0, 4);
-                else blur.into(result);
-                if (self == GlassMaterial.CLEAR) result[3] = 0;
-            }
-            blurredStamp[index] = stamp;
-            blurredRef[index] = result;
-            return result;
+            return get(dx, dy, dz) != GlassMaterial.NONE ? around.blurred(dx, dy, dz) : null;
         }
 
         void mean(float[] out, int a, int b, int c, int d) {
@@ -320,21 +344,17 @@ final class GlassBlockModel extends WrapperBlockStateModel {
             mix.into(out);
         }
 
-        int patch(float u, float v) {
+        void patch(float u, float v, float[] out) {
             GlassColor.bernstein(u, wu);
             GlassColor.bernstein(v, wv);
-            float lightness = 0, a = 0, b = 0, alpha = 0;
+            Arrays.fill(out, 0);
             for (int y = 0; y < 3; y++) {
                 for (int x = 0; x < 3; x++) {
                     float w = wu[x] * wv[y];
                     float[] c = grid[3 * y + x];
-                    lightness += w * c[0];
-                    a += w * c[1];
-                    b += w * c[2];
-                    alpha += w * c[3];
+                    for (int k = 0; k < 3; k++) out[k] += w * c[k];
                 }
             }
-            return GlassColor.argb(lightness, a, b, alpha);
         }
     }
 }

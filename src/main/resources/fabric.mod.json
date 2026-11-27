@@ -5,7 +5,10 @@
   "name": "Seamless Gradient Glass",
   "description": "Connected glass with smooth transitions between neighboring dye colors.",
   "environment": "client",
-  "entrypoints": { "client": ["com.ixce.gradientglass.GradientGlass"] },
+  "entrypoints": {
+    "client": ["com.ixce.gradientglass.GradientGlass"],
+    "modmenu": ["com.ixce.gradientglass.ModMenuIntegration"]
+  },
   "mixins": ["gradientglass.mixins.json"],
   "custom": {
     "sodium-extra:options": {
@@ -17,5 +20,9 @@
     "minecraft": "${minecraft_version}",
     "java": ">=25",
     "fabric-api": "*"
+  },
+  "suggests": {
+    "yet_another_config_lib_v3": "*",
+    "modmenu": "*"
   }
 }

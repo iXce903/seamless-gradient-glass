@@ -1,4 +1,4 @@
-package com.ixce.gradientglass;
+package com.ixce.gradientglass.texture;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import java.util.ArrayList;

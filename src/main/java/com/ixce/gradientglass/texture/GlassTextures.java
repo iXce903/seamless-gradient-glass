@@ -1,5 +1,7 @@
-package com.ixce.gradientglass;
+package com.ixce.gradientglass.texture;
 
+import com.ixce.gradientglass.GlassColor;
+import com.ixce.gradientglass.GlassMaterial;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -13,6 +15,7 @@ final class GlassTextures {
     private final GlassTexture[][] panes = new GlassTexture[GlassMaterial.PANES][16];
     private final GlassTexture[] paneTops = new GlassTexture[GlassMaterial.PANES];
     private final float[][] colors = new float[MATERIALS][];
+    private final boolean[][] samePattern = new boolean[MATERIALS][MATERIALS];
 
     static final class Lazy {
         private volatile GlassTextures textures;
@@ -52,6 +55,33 @@ final class GlassTextures {
             int average = tint != null && tint.material() == material ? tint.average() : loaded.averages()[material];
             colors[material] = GlassColor.lab(average != 0 ? average : 0xffffffff);
         }
+        for (int a = 1; a < MATERIALS; a++) {
+            var first = loaded.tints().get(blocks[a][0].material().sprite().contents().name());
+            for (int b = 1; b < MATERIALS; b++) {
+                var second = loaded.tints().get(blocks[b][0].material().sprite().contents().name());
+                samePattern[a][b] = first == second || first == null || second == null || similar(first.sample(), second.sample());
+            }
+        }
+    }
+
+    // Normalized textures that differ this little look the same once tinted.
+    private static final int PATTERN_TOLERANCE = 16;
+
+    private static boolean similar(Pixels a, Pixels b) {
+        if (a.size() != b.size()) return false;
+        for (int i = 0; i < a.argb().length; i++) {
+            int x = a.argb()[i], y = b.argb()[i];
+            if ((x >>> 24) < 32 && (y >>> 24) < 32) continue;
+            for (int shift = 0; shift < 32; shift += 8) {
+                if (Math.abs(((x >>> shift) & 255) - ((y >>> shift) & 255)) > PATTERN_TOLERANCE) return false;
+            }
+        }
+        return true;
+    }
+
+    /** Whether two stained materials show the same pattern, so blending their textures would change nothing. */
+    boolean samePattern(int a, int b) {
+        return samePattern[a][b];
     }
 
     GlassTexture block(int material, int tile) {
@@ -87,7 +117,7 @@ final class GlassTextures {
     private static GlassTexture texture(GlassSprites.Loaded loaded, TextureAtlasSprite sprite, int material) {
         boolean clear = material == GlassMaterial.CLEAR;
         var tint = clear ? null : loaded.tints().get(sprite.contents().name());
-        return new GlassTexture(new Material.Baked(sprite, true), clear, tint == null ? null : tint.gain());
+        return new GlassTexture(new Material.Baked(sprite, true), clear, tint == null ? null : tint.gain(), tint == null ? 1 : tint.alpha());
     }
 
     private static TextureAtlasSprite ctm(TextureAtlas atlas, int material, int tile, boolean pane) {

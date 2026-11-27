@@ -1,5 +1,6 @@
 package com.ixce.gradientglass.mixin;
 
+import com.ixce.gradientglass.config.GlassConfig;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -27,7 +28,7 @@ abstract class BeaconRendererMixin {
     private void gradientglass$section(PoseStack poses, SubmitNodeCollector collector, float scale, float time,
                                        int bottom, int height, int color, Operation<Void> original,
                                        @Local(argsOnly = true) BeaconRenderState state) {
-        submittingBelow = colorBelow(state, bottom, color);
+        submittingBelow = GlassConfig.beaconGradient() ? colorBelow(state, bottom, color) : 0;
         try {
             original.call(poses, collector, scale, time, bottom, height, color);
         } finally {

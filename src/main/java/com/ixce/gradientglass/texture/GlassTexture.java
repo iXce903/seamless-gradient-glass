@@ -1,10 +1,13 @@
-package com.ixce.gradientglass;
+package com.ixce.gradientglass.texture;
 
+import com.ixce.gradientglass.GlassColor;
 import net.minecraft.client.resources.model.sprite.Material;
 
-record GlassTexture(Material.Baked material, boolean clear, float[] gain) {
-    int tint(int gradient) {
-        if (clear) return 0xffffffff;
+// alpha is the texture's mean opacity.
+record GlassTexture(Material.Baked material, boolean clear, float[] gain, float alpha) {
+    int shade(float[] lab, float opacity) {
+        if (clear) return Math.round(255 * opacity) << 24 | 0xffffff;
+        int gradient = GlassColor.argb(lab[0], lab[1], lab[2], 255 * opacity);
         if (gain == null) return gradient | 0xffffff;
         return gradient & 0xff000000
                 | scale((gradient >>> 16) & 255, gain[0]) << 16
