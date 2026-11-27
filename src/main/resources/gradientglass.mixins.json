@@ -1,8 +1,14 @@
 {
   "required": true,
   "package": "com.ixce.gradientglass.mixin",
-  "compatibilityLevel": "JAVA_25",
-  "client": ["BeaconBlockEntityMixin", "BeaconRendererMixin", "ClientLevelMixin", "MovingBlockRenderStateMixin", "PistonHeadRendererMixin"],
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "BeaconBlockEntityMixin",
+    "BeaconRendererMixin",
+    "ClientLevelMixin",
+    "QuickCraftPreviewMixin",
+    "SpriteSourcesAccessor"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

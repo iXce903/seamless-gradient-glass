@@ -1,10 +1,10 @@
 # 无缝渐变玻璃
 
-面向 Minecraft Java 版 1.21.8 的 Fabric 客户端模组。相邻普通玻璃和 16 色染色玻璃会连成一面透明玻璃墙。外缘保留细框，墙面保留玻璃斜纹，颜色沿水平、竖直方向随相邻方块渐变。放置或敲掉玻璃后会重新渲染。
+面向 Minecraft Java 版 1.21.x（1.21.1 / 1.21.8）的 Fabric 客户端模组。相邻普通玻璃和 16 色染色玻璃会连成一面透明玻璃墙。外缘保留细框，墙面保留玻璃斜纹，颜色沿水平、竖直方向随相邻方块渐变。放置或敲掉玻璃后会重新渲染。
 
 ## 安装与使用
 
-使用 Java 21、Fabric Loader 0.17.2 或更高版本，并安装适用于 Minecraft 1.21.8 的 Fabric API。将发布 JAR 放进游戏实例的 `mods` 文件夹后启动游戏。单人和多人都只需安装在想看到效果的客户端。
+使用 Java 21、Fabric Loader 0.17.2 或更高版本，并安装对应版本的 Fabric API。将发布 JAR 放进游戏实例的 `mods` 文件夹后启动游戏。单人和多人都只需安装在想看到效果的客户端。
 
 可以从下到上各铺一排红、橙、黄、黄绿、淡蓝、紫、品红染色玻璃，每排四块，正面观察渐变。已有建筑也会使用相同效果。
 
@@ -70,7 +70,7 @@
 
 ## 构建
 
-在项目目录使用 Java 25 运行 `./gradlew buildAndCollect`（Windows 使用 `.\gradlew.bat buildAndCollect`），会构建 26.1.2、26.2、26.3 三个版本，并把安装包收集到 `build/libs`。只运行 `build` 时，各版本的安装包分别位于 `versions/<版本>/build/libs`。
+在项目目录使用 Java 21 运行 `./gradlew buildAndCollect`（Windows 使用 `.\gradlew.bat buildAndCollect`），会构建 1.21.1 与 1.21.8 两个版本，并把安装包收集到 `build/libs`。只运行 `build` 时，各版本的安装包分别位于 `versions/<版本>/build/libs`。
 
 ## 0.5.1 玻璃墙实测
 

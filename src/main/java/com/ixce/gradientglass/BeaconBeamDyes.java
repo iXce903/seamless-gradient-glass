@@ -8,7 +8,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
+//? if >=1.21.5 {
 import net.minecraft.world.level.block.entity.BeaconBeamOwner;
+//?} else {
+/*import net.minecraft.world.level.block.entity.BeaconBlockEntity;
+*///?}
 
 // Clear glass and panes inside a dyed beacon beam take the beam's color.
 public final class BeaconBeamDyes {
@@ -23,14 +27,23 @@ public final class BeaconBeamDyes {
         return COLORS.getOrDefault(BlockPos.asLong(x, y, z), 0);
     }
 
+    //? if >=1.21.5 {
     public static void update(ClientLevel level, BlockPos beacon, List<BeaconBeamOwner.Section> sections) {
+    //?} else {
+    /*public static void update(ClientLevel level, BlockPos beacon, List<BeaconBlockEntity.BeaconBeamSection> sections) {
+    *///?}
         Map<Long, Integer> dyed = new HashMap<>();
         var cursor = beacon.mutable();
         int y = beacon.getY();
+        //? if >=1.21.2 {
+        int maxY = level.getMaxY() + 1;
+        //?} else {
+        /*int maxY = level.getMaxBuildHeight();
+        *///?}
         for (int i = 0; i < sections.size(); i++) {
             var section = sections.get(i);
             int color = section.getColor();
-            int top = Math.min(y + section.getHeight(), level.getMaxY() + 1);
+            int top = Math.min(y + section.getHeight(), maxY);
             // The first section is the undyed white beam.
             if (i > 0 && color != -1) {
                 for (int cy = y; cy < top; cy++) {

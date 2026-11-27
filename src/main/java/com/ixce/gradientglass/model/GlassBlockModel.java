@@ -8,26 +8,56 @@ import com.ixce.gradientglass.texture.GlassTexture;
 import com.ixce.gradientglass.texture.GlassTextures;
 import java.util.Arrays;
 import java.util.function.Predicate;
+//? if >=1.21.5 {
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
-import net.fabricmc.fabric.api.client.renderer.v1.mesh.MutableQuadView;
-import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
-import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadTransform;
-import net.minecraft.client.renderer.block.BlockAndTintGetter;
-import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadTransform;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+//?} else {
+/*import java.util.function.Supplier;
+import net.fabricmc.fabric.api.renderer.v1.RendererAccess;
+import net.fabricmc.fabric.api.renderer.v1.material.BlendMode;
+import net.fabricmc.fabric.api.renderer.v1.material.RenderMaterial;
+import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
+import net.fabricmc.fabric.api.renderer.v1.model.ForwardingBakedModel;
+import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
+import net.minecraft.client.resources.model.BakedModel;
+*///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
+//? if >=1.21.5 {
 public final class GlassBlockModel extends WrapperBlockStateModel {
+//?} else {
+/*public final class GlassBlockModel extends ForwardingBakedModel {
+*///?}
     private static final Direction[] FACES = Direction.values();
     private static final int[] SIGNS = {-1, 1};
     private static final ThreadLocal<Sampler> SAMPLER = ThreadLocal.withInitial(Sampler::new);
     private final GlassTextures.Lazy textures;
 
+    //? if <1.21.5 {
+    /*private static volatile RenderMaterial translucent;
+
+    static RenderMaterial translucentMaterial() {
+        var m = translucent;
+        if (m == null) {
+            var renderer = RendererAccess.INSTANCE.getRenderer();
+            if (renderer != null) translucent = m = renderer.materialFinder().blendMode(BlendMode.TRANSLUCENT).find();
+        }
+        return m;
+    }
+    *///?}
+
+    //? if >=1.21.5 {
     public GlassBlockModel(BlockStateModel model, GlassTextures.Lazy textures) {
         super(model);
         this.textures = textures;
@@ -63,6 +93,43 @@ public final class GlassBlockModel extends WrapperBlockStateModel {
             }
         }
     }
+    //?} else {
+    /*public GlassBlockModel(BakedModel model, GlassTextures.Lazy textures) {
+        this.wrapped = model;
+        this.textures = textures;
+    }
+
+    @Override
+    public boolean isVanillaAdapter() {
+        return false;
+    }
+
+    @Override
+    public void emitBlockQuads(BlockAndTintGetter view, BlockState state, BlockPos pos,
+                               Supplier<RandomSource> randomSupplier, RenderContext context) {
+        var sampler = SAMPLER.get();
+        int faces = (1 << FACES.length) - 1;
+        if (state.is(Blocks.BEACON)) {
+            var shell = sampler.shell;
+            shell.faces = 0;
+            context.pushTransform(shell);
+            try {
+                super.emitBlockQuads(view, state, pos, randomSupplier, context);
+            } finally {
+                context.popTransform();
+            }
+            faces = shell.faces;
+        }
+        sampler.begin(view, pos, textures.get());
+        int material = sampler.get(0, 0, 0);
+        QuadEmitter out = context.getEmitter();
+        for (Direction face : FACES) {
+            if ((faces & (1 << face.ordinal())) != 0 && !context.isFaceCulled(face) && sampler.get(face, 1) == GlassMaterial.NONE) {
+                emitFace(out, sampler, material, face);
+            }
+        }
+    }
+    *///?}
 
     private static void emitFace(QuadEmitter out, Sampler sampler, int material, Direction face) {
         Direction right = switch (face) {
@@ -227,8 +294,14 @@ public final class GlassBlockModel extends WrapperBlockStateModel {
             out.uv(0, l, 1 - t).uv(1, l, 1 - b).uv(2, r, 1 - b).uv(3, r, 1 - t);
             out.color(c0, c1, c2, c3);
         }
-        out.materialBake(texture.material(), QuadEmitter.BAKE_NORMALIZED);
-        out.chunkLayer(ChunkSectionLayer.TRANSLUCENT).emit();
+        out.spriteBake(texture.sprite(), MutableQuadView.BAKE_NORMALIZED);
+        //? if >=1.21.5 {
+        out.renderLayer(ChunkSectionLayer.TRANSLUCENT).emit();
+        //?} else {
+        /*var mat = translucentMaterial();
+        if (mat != null) out.material(mat);
+        out.emit();
+        *///?}
     }
 
     private static int offset(Direction direction) {
@@ -243,7 +316,11 @@ public final class GlassBlockModel extends WrapperBlockStateModel {
         return da * da + dr * dr + dg * dg + db * db;
     }
 
+    //? if >=1.21.5 {
     private static final class ShellRemover implements QuadTransform {
+    //?} else {
+    /*private static final class ShellRemover implements RenderContext.QuadTransform {
+    *///?}
         int faces;
 
         @Override
@@ -273,6 +350,12 @@ public final class GlassBlockModel extends WrapperBlockStateModel {
         final ShellRemover shell = new ShellRemover();
         final GlassNeighborhood around = new GlassNeighborhood();
         final float[] lab = new float[3];
+        //? if <1.21.2 {
+        /*private BlockAndTintGetter view;
+        private BlockPos origin;
+        private final BlockPos.MutableBlockPos blockCursor = new BlockPos.MutableBlockPos();
+        private final BlockPos.MutableBlockPos openCursor = new BlockPos.MutableBlockPos();
+        *///?}
         GlassTextures textures;
         private final GlassColor.Mix mix = new GlassColor.Mix();
         final float[][] grid = new float[9][4];
@@ -284,6 +367,10 @@ public final class GlassBlockModel extends WrapperBlockStateModel {
         private final float[] wu = new float[3], wv = new float[3];
 
         void begin(BlockAndTintGetter view, BlockPos pos, GlassTextures textures) {
+            //? if <1.21.2 {
+            /*this.view = view;
+            this.origin = pos;
+            *///?}
             this.textures = textures;
             around.begin(view, pos, textures);
         }
@@ -310,7 +397,15 @@ public final class GlassBlockModel extends WrapperBlockStateModel {
         boolean showsFace(int block, int open, Direction face) {
             if (getOffset(block) == GlassMaterial.NONE) return false;
             BlockState outside = stateAtOffset(open);
+            //? if >=1.21.2 {
             return outside.isAir() || Block.shouldRenderFace(stateAtOffset(block), outside, face);
+            //?} else {
+            /*if (outside.isAir()) return true;
+            int bi = 13 + block, oi = 13 + open;
+            blockCursor.set(origin.getX() + bi % 3 - 1, origin.getY() + bi / 3 % 3 - 1, origin.getZ() + bi / 9 - 1);
+            openCursor.set(origin.getX() + oi % 3 - 1, origin.getY() + oi / 3 % 3 - 1, origin.getZ() + oi / 9 - 1);
+            return Block.shouldRenderFace(stateAtOffset(block), view, blockCursor, face, openCursor);
+            *///?}
         }
 
         boolean hasAdjacentFold(int normal, int along, int across, Direction face, Direction foldedFace) {

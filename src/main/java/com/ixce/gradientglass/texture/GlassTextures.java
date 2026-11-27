@@ -5,9 +5,7 @@ import com.ixce.gradientglass.GlassMaterial;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.sprite.Material;
-import net.minecraft.data.AtlasIds;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public final class GlassTextures {
     private static final int MATERIALS = GlassMaterial.NAMES.length;
@@ -25,7 +23,7 @@ public final class GlassTextures {
             if (current != null) return current;
             synchronized (this) {
                 if (textures == null) {
-                    textures = new GlassTextures(Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.BLOCKS));
+                    textures = new GlassTextures(Minecraft.getInstance().getModelManager().getAtlas(TextureAtlas.LOCATION_BLOCKS));
                 }
                 return textures;
             }
@@ -51,14 +49,14 @@ public final class GlassTextures {
                 paneTops[material] = texture(loaded, top, material);
             }
             if (material == GlassMaterial.CLEAR) continue;
-            var tint = loaded.tints().get(blocks[material][0].material().sprite().contents().name());
+            var tint = loaded.tints().get(blocks[material][0].sprite().contents().name());
             int average = tint != null && tint.material() == material ? tint.average() : loaded.averages()[material];
             colors[material] = GlassColor.lab(average != 0 ? average : 0xffffffff);
         }
         for (int a = 1; a < MATERIALS; a++) {
-            var first = loaded.tints().get(blocks[a][0].material().sprite().contents().name());
+            var first = loaded.tints().get(blocks[a][0].sprite().contents().name());
             for (int b = 1; b < MATERIALS; b++) {
-                var second = loaded.tints().get(blocks[b][0].material().sprite().contents().name());
+                var second = loaded.tints().get(blocks[b][0].sprite().contents().name());
                 samePattern[a][b] = first == second || first == null || second == null || similar(first.sample(), second.sample());
             }
         }
@@ -89,11 +87,11 @@ public final class GlassTextures {
     }
 
     public GlassTexture pane(int material, int edges) {
-        return panes[material][edges];
+        return material < panes.length ? panes[material][edges] : blocks[material][Ctm.tile(edges, 255)];
     }
 
     public GlassTexture paneTop(int material) {
-        return paneTops[material];
+        return material < paneTops.length ? paneTops[material] : blocks[material][0];
     }
 
     public float[] color(int material) {
@@ -117,7 +115,7 @@ public final class GlassTextures {
     private static GlassTexture texture(GlassSprites.Loaded loaded, TextureAtlasSprite sprite, int material) {
         boolean clear = material == GlassMaterial.CLEAR;
         var tint = clear ? null : loaded.tints().get(sprite.contents().name());
-        return new GlassTexture(new Material.Baked(sprite, true), clear, tint == null ? null : tint.gain(), tint == null ? 1 : tint.alpha());
+        return new GlassTexture(sprite, clear, tint == null ? null : tint.gain(), tint == null ? 1 : tint.alpha());
     }
 
     private static TextureAtlasSprite ctm(TextureAtlas atlas, int material, int tile, boolean pane) {
@@ -132,11 +130,11 @@ public final class GlassTextures {
     }
 
     private static TextureAtlasSprite vanilla(TextureAtlas atlas, String name) {
-        return atlas.getSprite(Identifier.withDefaultNamespace("block/" + name));
+        return atlas.getSprite(ResourceLocation.withDefaultNamespace("block/" + name));
     }
 
     // The atlas returns its missing sprite for an absent id.
-    private static TextureAtlasSprite find(TextureAtlas atlas, Identifier id) {
+    private static TextureAtlasSprite find(TextureAtlas atlas, ResourceLocation id) {
         var sprite = atlas.getSprite(id);
         return sprite.contents().name().equals(id) ? sprite : null;
     }

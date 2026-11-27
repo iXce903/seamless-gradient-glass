@@ -7,33 +7,60 @@ import com.ixce.gradientglass.texture.GlassTexture;
 import com.ixce.gradientglass.texture.GlassTextures;
 import java.util.Arrays;
 import java.util.function.Predicate;
+//? if >=1.21.5 {
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
-import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
-import net.minecraft.client.renderer.block.BlockAndTintGetter;
-import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+//?} else {
+/*import java.util.function.Supplier;
+import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
+import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
+import net.fabricmc.fabric.api.renderer.v1.model.ForwardingBakedModel;
+import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
+import net.minecraft.client.resources.model.BakedModel;
+*///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 
+//? if >=1.21.5 {
 public final class GlassPaneModel extends WrapperBlockStateModel {
+//?} else {
+/*public final class GlassPaneModel extends ForwardingBakedModel {
+*///?}
     private static final float LO = 7f / 16, HI = 9f / 16;
     private static final Direction[] HORIZONTAL = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
     private static final Direction[] VERTICAL = {Direction.UP, Direction.DOWN};
     private static final ThreadLocal<Field> FIELD = ThreadLocal.withInitial(Field::new);
     private final GlassTextures.Lazy textures;
 
+    //? if >=1.21.5 {
     public GlassPaneModel(BlockStateModel model, GlassTextures.Lazy textures) {
         super(model);
         this.textures = textures;
     }
+    //?} else {
+    /*public GlassPaneModel(BakedModel model, GlassTextures.Lazy textures) {
+        this.wrapped = model;
+        this.textures = textures;
+    }
+
+    @Override
+    public boolean isVanillaAdapter() {
+        return false;
+    }
+    *///?}
 
     private static boolean hasPart(BlockState state, Direction arm) {
         if (GlassMaterial.ofPane(state) == GlassMaterial.NONE) return false;
         return arm == null || GlassNeighborhood.hasArm(state, arm);
     }
 
+    //? if >=1.21.5 {
     @Override
     public Object createGeometryKey(BlockAndTintGetter view, BlockPos pos, BlockState state, RandomSource random) {
         return null;
@@ -51,6 +78,22 @@ public final class GlassPaneModel extends WrapperBlockStateModel {
             if (hasPart(state, arm)) emitPart(out, textures, field, state, arm, cullTest);
         }
     }
+    //?} else {
+    /*@Override
+    public void emitBlockQuads(BlockAndTintGetter view, BlockState state, BlockPos pos,
+                               Supplier<RandomSource> randomSupplier, RenderContext context) {
+        var textures = this.textures.get();
+        var field = FIELD.get();
+        field.begin(view, pos, textures);
+        field.prepare(state);
+        QuadEmitter out = context.getEmitter();
+        Predicate<Direction> cullTest = context::isFaceCulled;
+        emitPart(out, textures, field, state, null, cullTest);
+        for (Direction arm : HORIZONTAL) {
+            if (hasPart(state, arm)) emitPart(out, textures, field, state, arm, cullTest);
+        }
+    }
+    *///?}
 
     private static void emitPart(QuadEmitter out, GlassTextures textures, Field field,
                                  BlockState state, Direction arm, Predicate<Direction> cullTest) {
@@ -133,7 +176,7 @@ public final class GlassPaneModel extends WrapperBlockStateModel {
                                  float depth, GlassTexture texture, Layer layer, int index) {
         out.square(face, l, b, r, t, depth);
         out.uv(0, l, 1 - t).uv(1, l, 1 - b).uv(2, r, 1 - b).uv(3, r, 1 - t);
-        out.materialBake(texture.material(), QuadEmitter.BAKE_NORMALIZED);
+        out.spriteBake(texture.sprite(), MutableQuadView.BAKE_NORMALIZED);
         paint(out, field, texture, layer, index);
     }
 
@@ -153,7 +196,7 @@ public final class GlassPaneModel extends WrapperBlockStateModel {
             else out.square(Direction.DOWN, xa, za, xb, zb, depth);
             out.cullFace(null);
             for (int i = 0; i < 4; i++) out.uv(i, alongX ? out.z(i) : out.x(i), alongX ? out.x(i) : out.z(i));
-            out.materialBake(texture.material(), QuadEmitter.BAKE_NORMALIZED);
+            out.spriteBake(texture.sprite(), MutableQuadView.BAKE_NORMALIZED);
             paint(out, field, texture, layer, index);
         }
     }
@@ -179,7 +222,15 @@ public final class GlassPaneModel extends WrapperBlockStateModel {
             alpha |= color >>> 24;
             out.color(i, color);
         }
-        if (alpha != 0) out.chunkLayer(ChunkSectionLayer.TRANSLUCENT).emit();
+        //? if >=1.21.5 {
+        if (alpha != 0) out.renderLayer(ChunkSectionLayer.TRANSLUCENT).emit();
+        //?} else {
+        /*if (alpha != 0) {
+            var mat = GlassBlockModel.translucentMaterial();
+            if (mat != null) out.material(mat);
+            out.emit();
+        }
+        *///?}
     }
 
     private static final class Field {

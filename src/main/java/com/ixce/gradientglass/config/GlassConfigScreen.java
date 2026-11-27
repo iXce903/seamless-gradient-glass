@@ -64,11 +64,7 @@ final class GlassConfigScreen {
         if (textures) {
             minecraft.reloadResourcePacks();
         } else if (minecraft.level != null) {
-            //? if >=26.2 {
-            minecraft.levelExtractor.allChanged();
-            //?} else {
-            /*minecraft.levelRenderer.allChanged();
-            *///?}
+            minecraft.levelRenderer.allChanged();
         }
     }
 

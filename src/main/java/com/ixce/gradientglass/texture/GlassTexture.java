@@ -1,10 +1,10 @@
 package com.ixce.gradientglass.texture;
 
 import com.ixce.gradientglass.GlassColor;
-import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 // alpha is the texture's mean opacity.
-public record GlassTexture(Material.Baked material, boolean clear, float[] gain, float alpha) {
+public record GlassTexture(TextureAtlasSprite sprite, boolean clear, float[] gain, float alpha) {
     public int shade(float[] lab, float opacity) {
         if (clear) return Math.round(255 * opacity) << 24 | 0xffffff;
         int gradient = GlassColor.argb(lab[0], lab[1], lab[2], 255 * opacity);

@@ -7,7 +7,7 @@ import com.ixce.gradientglass.config.GlassConfig;
 import com.ixce.gradientglass.texture.GlassTextures;
 import java.util.ArrayList;
 import java.util.Arrays;
-import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Blocks;

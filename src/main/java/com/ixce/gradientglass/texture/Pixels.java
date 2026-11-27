@@ -5,23 +5,46 @@ import java.io.IOException;
 import java.util.Arrays;
 import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.resources.metadata.animation.FrameSize;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceMetadata;
 
 record Pixels(int size, int[] argb) {
     static Pixels read(Resource resource) throws IOException {
         try (var stream = resource.open(); var image = NativeImage.read(stream)) {
             int size = image.getWidth(), height = image.getHeight();
             if (size == 0 || height % size != 0) return null;
+            //? if >=1.21.2 {
             return new Pixels(size, Arrays.copyOf(image.getPixels(), size * size));
+            //?} else {
+            /*int[] argb = new int[size * size];
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) argb[y * size + x] = swapRedBlue(image.getPixelRGBA(x, y));
+            }
+            return new Pixels(size, argb);
+            *///?}
         }
     }
 
-    SpriteContents sprite(Identifier id) {
+    static void setPixel(NativeImage image, int x, int y, int argb) {
+        //? if >=1.21.2 {
+        image.setPixel(x, y, argb);
+        //?} else {
+        /*image.setPixelRGBA(x, y, swapRedBlue(argb));
+        *///?}
+    }
+
+    //? if <1.21.2 {
+    /*private static int swapRedBlue(int color) {
+        return (color & 0xff00ff00) | ((color & 0xff) << 16) | ((color >>> 16) & 0xff);
+    }
+    *///?}
+
+    SpriteContents sprite(ResourceLocation id) {
         return withBorders(id, 15);
     }
 
-    SpriteContents withBorders(Identifier id, int edges) {
+    SpriteContents withBorders(ResourceLocation id, int edges) {
         int border = 1;
         var image = new NativeImage(size, size, false);
         for (int y = 0; y < size; y++) {
@@ -31,9 +54,9 @@ record Pixels(int size, int[] argb) {
                 if ((edges & 2) == 0 && x >= size - border) sx = size - border - 1;
                 if ((edges & 8) == 0 && y < border) sy = border;
                 if ((edges & 4) == 0 && y >= size - border) sy = size - border - 1;
-                image.setPixel(x, y, argb[sy * size + sx]);
+                setPixel(image, x, y, argb[sy * size + sx]);
             }
         }
-        return new SpriteContents(id, new FrameSize(size, size), image);
+        return new SpriteContents(id, new FrameSize(size, size), image, ResourceMetadata.EMPTY);
     }
 }

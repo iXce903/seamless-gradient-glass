@@ -6,7 +6,9 @@ import java.util.List;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+//? if >=1.21.5 {
 import net.minecraft.world.level.block.entity.BeaconBeamOwner;
+//?}
 import net.minecraft.world.level.block.entity.BeaconBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,14 +21,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // only needs to be found again when the list changes.
 @Mixin(BeaconBlockEntity.class)
 abstract class BeaconBlockEntityMixin {
+    //? if >=1.21.5 {
     @Unique
     private List<BeaconBeamOwner.Section> gradientglass$dyedSections;
+    //?} else {
+    /*@Unique
+    private List<BeaconBlockEntity.BeaconBeamSection> gradientglass$dyedSections;
+    *///?}
 
     @Inject(method = "tick", at = @At("TAIL"))
     private static void gradientglass$dye(Level level, BlockPos pos, BlockState state, BeaconBlockEntity beacon, CallbackInfo ci) {
         if (!(level instanceof ClientLevel client)) return;
         var self = (BeaconBlockEntityMixin) (Object) beacon;
+        //? if >=1.21.5 {
         var sections = GlassConfig.beaconDye() ? beacon.getBeamSections() : List.<BeaconBeamOwner.Section>of();
+        //?} else {
+        /*var sections = GlassConfig.beaconDye() ? beacon.getBeamSections() : List.<BeaconBlockEntity.BeaconBeamSection>of();
+        *///?}
         if (sections == self.gradientglass$dyedSections) return;
         self.gradientglass$dyedSections = sections;
         BeaconBeamDyes.update(client, pos, sections);

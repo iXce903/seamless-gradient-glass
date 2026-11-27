@@ -1,5 +1,5 @@
 plugins {
-    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'fabric-loom' version "${loom_version}"
 }
 
 def mcVersion = stonecutter.current.version
@@ -18,15 +18,18 @@ repositories {
 
 dependencies {
     minecraft "com.mojang:minecraft:${mcVersion}"
+    mappings loom.officialMojangMappings()
 
-    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
     // Optional: the config screen needs both.
-    compileOnly "dev.isxander:yet-another-config-lib:${project.yacl_version}"
-    compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
-    localRuntime "dev.isxander:yet-another-config-lib:${project.yacl_version}"
-    localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
+    modCompileOnly("dev.isxander:yet-another-config-lib:${project.yacl_version}") {
+        exclude group: 'net.fabricmc.fabric-api'
+    }
+    modCompileOnly("com.terraformersmc:modmenu:${project.modmenu_version}") {
+        exclude group: 'net.fabricmc.fabric-api'
+    }
 }
 
 processResources {
@@ -42,19 +45,19 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 25
+    it.options.release = 21
 }
 
 java {
     withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 tasks.register('buildAndCollect', Copy) {
     group = 'build'
     description = 'Builds this version and copies its jar to the root build/libs folder.'
     dependsOn tasks.named('build')
-    from(tasks.named('jar').flatMap { it.archiveFile })
+    from(tasks.named('remapJar').flatMap { it.archiveFile })
     into(rootProject.layout.buildDirectory.dir('libs'))
 }
