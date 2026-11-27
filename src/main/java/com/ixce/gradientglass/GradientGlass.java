@@ -24,6 +24,10 @@ public class GradientGlass implements ClientModInitializer {
         return GlassMaterial.of(state) != GlassMaterial.NONE || GlassMaterial.ofPane(state) != GlassMaterial.NONE;
     }
 
+    public static boolean isGradientModel(Object model) {
+        return model instanceof GlassBlockModel || model instanceof GlassPaneModel;
+    }
+
     // Vanilla rebuilds only the sections within one block of a change; glass gradients reach further.
     public static void rebuildAround(ClientLevel level, BlockPos pos) {
         level.setSectionRangeDirty(
