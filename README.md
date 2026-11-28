@@ -1,104 +1,89 @@
-# 无缝渐变玻璃
+English | [简体中文](README_zh.md)
 
-面向 Minecraft Java 版 1.21.x（1.21.1 / 1.21.8）的 Fabric 客户端模组。相邻普通玻璃和 16 色染色玻璃会连成一面透明玻璃墙。外缘保留细框，墙面保留玻璃斜纹，颜色沿水平、竖直方向随相邻方块渐变。放置或敲掉玻璃后会重新渲染。
+# Seamless Gradient Glass
 
-## 安装与使用
+A client-side Fabric mod for Minecraft Java Edition `26.x` and `1.21.x`. Going beyond connected glass textures, it smoothly blends colors across neighboring glass blocks and panes while interacting with beacons and beacon beams.
 
-使用 Java 21、Fabric Loader 0.17.2 或更高版本，并安装对应版本的 Fabric API。将发布 JAR 放进游戏实例的 `mods` 文件夹后启动游戏。单人和多人都只需安装在想看到效果的客户端。
+---
 
-可以从下到上各铺一排红、橙、黄、黄绿、淡蓝、紫、品红染色玻璃，每排四块，正面观察渐变。已有建筑也会使用相同效果。
+## Features
 
-## 0.6.0 普通玻璃、遮光玻璃与信标外壳
+### Seamless Connected Glass & Color Gradients
 
-普通玻璃直接使用原版或材质包的贴图，不染色，和原版看起来一致。相连的玻璃之间不画边框，只保留墙面外缘。染色玻璃与相连的普通玻璃之间，在交界两侧各 1.5 格内平滑过渡。普通玻璃保持原样，上面叠一层染色玻璃的色雾，色雾从交界处的一半浓度向外逐渐消失；染色玻璃一侧在色雾下方垫一层普通玻璃，越往里越淡，因此外框和反光在交界两侧连续。过渡按到交界的真实距离计算，拐角处圆滑；只有通过玻璃相连的方块参与过渡。两种花纹不同的染色玻璃（例如材质包给各色画了不同图案，或染色玻璃与遮光玻璃）相连时，也用同样的方式在交界两侧叠加对方的贴图，并按两张贴图的平均透明度调整两层的透明度，使叠加处的总透明度与单张贴图一致。多种花纹交汇时，每种附近的玻璃各叠一层，按到各自的距离分配权重，在交界处平均分配。原版各色染色玻璃的花纹相同，不会额外叠加。离交界较远的面只画一层贴图。
+- **Unified Transparent Glass Walls**: Adjacent clear glass, 16-color stained glass, and tinted glass automatically merge into a single continuous wall. Inner borders between connected blocks are removed, leaving only the outer perimeter frame while preserving the diagonal glass glare.
+- **Smooth Color Transitions**: Neighboring stained glass blocks of different colors no longer show harsh tile seams—colors blend smoothly both horizontally and vertically. Even high-contrast pairs such as red and blue fade naturally without sharp edges or corners, while solid-color regions retain their clean, transparent look.
+- **Live Updates**: Placing or breaking glass immediately updates the surrounding gradient effect, and existing builds in your worlds work automatically without modification.
 
-遮光玻璃以原版纹理的深灰紫色参与相邻整块玻璃的渐变，仍按原版规则阻挡光照。信标的玻璃外壳也参与渐变，能与普通玻璃、染色玻璃、遮光玻璃和相邻信标连接。内部晶体和黑曜石底座沿用信标的烘焙模型。
+### Smooth Transitions for Clear Glass & Mixed Patterns
 
-## 材质包
+- **Clear-to-Stained Borders**: Clear glass itself keeps its vanilla or resource-pack appearance rather than turning solid colored. Where it meets stained glass, a subtle colored mist extends roughly `1.5` blocks on both sides of the border and fades out smoothly, with rounded corners and continuous outer frames and highlights across the seam.
+- **Multi-Pattern Resource Packs**: When using a resource pack that gives different glass colors distinct patterns (or when stained glass connects with tinted glass), both colors and textures cross-fade across the border while keeping overall opacity balanced.
 
-* **CTM 连接纹理材质包**：16 色染色玻璃和遮光玻璃各自读取自己的 CTM 规则，贴图的颜色与花纹都会保留：在方块中心画出的就是材质包原图，靠近相邻玻璃时颜色逐渐过渡过去。某个颜色没有单独规则时，沿用白色染色玻璃的规则，颜色仍取自这种颜色自己的贴图。如果玻璃板没写单独规则，会自动复用整块玻璃的贴图。
+### Tinted Glass & Beacon Casing Integration
 
-* **普通材质包**：只替换了 `glass.png`、各色 `*_stained_glass.png` 等普通贴图（没有 CTM）的材质包同样生效，相邻玻璃之间的边框会被自动去掉（仅限 16×16 的贴图；更大的贴图边框宽度不定，保留原样）；如果这类材质包排在带 CTM 的材质包上方，以它为准。两者都没有时使用原版贴图，并同样去掉相连一侧的边框。模组不再自带贴图。
+- **Tinted Glass Blending**: Tinted glass participates in color gradients with its dark grayish-purple tint when placed next to other full glass blocks, while keeping its light-blocking behavior.
+- **Beacon Glass Casing Blending**: A beacon's outer glass casing connects and blends colors with adjacent clear glass, stained glass, tinted glass, and other beacons, while keeping its inner crystal and obsidian base unchanged.
 
-## 玻璃板
+### Glass Panes & Moving Pistons
 
-从 0.3.0 起，普通玻璃板与 16 色染色玻璃板支持横向和竖向渐变。玻璃板按原版连接状态形成细柱、直墙、转角、丁字和十字连接。上下叠放时只显示露出的薄边。玻璃板与整块玻璃按同一套规则混色、连通和过渡：玻璃板的臂连着整块玻璃，或上下叠在整块玻璃上时，两者的颜色互相模糊，透明过渡也会跨过两者。
+- **Glass Pane Gradients**: Clear panes and all 16 stained glass pane colors support horizontal and vertical color gradients across posts, straight walls, corners, T-junctions, and crosses. Vertically stacked panes show only exposed thin edges. Panes connected to or stacked with full glass blocks share the same color blending and clear-border transitions.
+- **Moving Piston Rendering (`26.x` & `1.21.11`)**: On `26.x` and `1.21.11`, glass blocks and panes pushed by pistons connect and blend with glass around their destination mid-motion for a seamless arrival (other blocks keep vanilla rendering). On `1.21.1` and `1.21.8`, piston movement keeps the vanilla appearance and immediately refreshes the gradient within a 2-block radius once settled.
 
-被活塞推动的玻璃和玻璃板在移动中也会连接、混色并参与过渡：移动中的方块能看到它将要到达位置周围的玻璃，周围的玻璃也会把正在移入的方块当作玻璃。其他方块仍按原版方式渲染。
+### Beacon Beam Gradients & Tinting
 
-## 渐变过渡
+- **Smooth Segment-by-Segment Beam Transitions**: When an active beacon beam passes through a stained glass block of a new color, it fades smoothly from the previous color to the new color over the height of one block instead of snapping abruptly. Stacking multiple colors creates a continuous rainbow beam across both the inner core and outer glow.
+- **Beam-to-Glass Dyeing**: A colored beacon beam passing upward through clear glass blocks or clear glass panes tints those clear blocks with the beam's current color and blends them into neighboring glass.
 
-每种染色玻璃参与渐变的颜色，是其贴图按透明度加权的平均色（取自当前生效的材质包，没有时取原版贴图）。染色贴图在资源重载时按各通道最亮值归一化，并记下每种贴图的平均色和增益；渲染时，顶点颜色等于渐变色乘以增益，画出的平均颜色因此正好等于渐变色。过渡到比自身亮得多的颜色时，个别通道可能达到上限，过渡会略显不足。
+### Resource Pack & Mod Compatibility
 
-每块玻璃的颜色先与周围一格内的玻璃按 1-2-1 权重模糊，一种颜色因此会影响到两格外，红与蓝这类反差大的颜色也能在两三格内逐渐过渡。墙面颜色按均匀二次 B 样条插值，在方块中心不再出现折角；颜色有变化的方向上，每个面细分为 4 段（玻璃板的臂为 2 段、高度为 4 段），纯色区域仍合并为整面。颜色在 OKLab 色彩空间中混合，相同的距离看起来变化量相近。放置或敲掉玻璃时，两格内的玻璃都会重新渲染。
+- **CTM & Standard Resource Packs**: Supports CTM connected textures (including common 5-tile compact and 47-tile rules), keeping your pack's patterns while adding color gradients. Standard `16×16` resource packs also have inner borders between connected glass removed automatically. Colors or panes without dedicated rules fall back to their corresponding defaults.
+- **Continuity**: Compatible alongside Continuity (enable its built-in `Default` and `Glass Pane Culling Fix` packs). This mod handles clear glass, stained glass, and panes while Continuity continues rendering connected textures for other blocks.
+- **QuickCraft**: Compatible with QuickCraft's Litematica isometric previews on both `26.x` and `1.21.x`.
+- **Sodium Extra**: Beacon beam gradients render properly alongside Sodium Extra `0.7.0`.
 
-## 连接纹理材质包
+---
 
-0.5.0 在资源重载时扫描已启用材质包的 `optifine/ctm/**/*.properties`。把想使用的包放在资源包列表上方。每种玻璃和玻璃板分别选择自己的规则；某种颜色没有规则时沿用白色染色玻璃的。玻璃板缺少单独规则时沿用整块玻璃贴图。
+## Requirements & Configuration
 
-支持常见的 `ctm_compact` 五图静态规则和 `ctm` 标准 47 图规则，可用 `matchBlocks` 或 `matchTiles` 匹配，`tiles` 可指定数字范围或贴图文件列表。规则可以放在不同子目录。可用规则优先取自资源包列表上方，同包内按规则路径排序。带生物群系、特定高度或方块状态等条件的规则、随机和覆盖层规则尚未适配。没有匹配的规则时使用原版或材质包的普通贴图。
+### Environment Requirements
 
-## 信标光束
+| Branch | Game Versions | Java Version | Fabric Loader | Required Dependency |
+| --- | --- | --- | --- | --- |
+| `26.x` | `26.1.2` / `26.2` / `26.3` | Java 25 | `>=0.19.5` | Matching Fabric API |
+| `1.21.x` | `1.21.1` / `1.21.8` / `1.21.11` | Java 21 | `>=0.16.10` | Matching Fabric API |
 
-染色的信标光柱穿过普通玻璃或玻璃板时，会把它们染成光柱当前的颜色，并与周围玻璃一起渐变。信标每扫描完一轮光柱（约两秒）才重新查找一次，只重新渲染颜色有变化的位置。
+- **Optional Dependencies (both branches)**: Installing both [Mod Menu](https://modrinth.com/mod/modmenu) and [YetAnotherConfigLib](https://modrinth.com/mod/yacl) (YACL) enables the in-game configuration screen. Without them, the mod still runs normally and can be configured directly in `config/gradientglass.json`.
 
-从 0.2.0 起，已激活的信标光束在进入新的原版颜色段时，会在一格高度内从下方颜色平滑变到该段颜色。连续堆叠不同染色玻璃即可得到连续渐变；最上方的光束维持最后的混合色。光束中心和外层光晕都会随之过渡。
+### Config Options
 
-与 Sodium Extra 0.7.0 同装时，0.3.1 会通过其兼容选项关闭单独的信标光束渲染优化，让光束渐变生效。
+Saving changes in the config GUI immediately re-renders loaded chunks:
 
-## Continuity
-
-可以同时安装 Continuity 并启用其 Default 和 Glass Pane Culling Fix 内置资源包。本模组绘制原版普通玻璃、染色玻璃及其玻璃板的世界模型。其他方块仍可使用 Continuity 的连接纹理。
-
-## 配置
-
-安装 [Mod Menu](https://modrinth.com/mod/modmenu) 和 [YetAnotherConfigLib](https://modrinth.com/mod/yacl) 后，可以在模组列表中打开设置界面。两者都是可选的：不装时使用默认值，也可以直接编辑 `config/gradientglass.json`。
-
-| 选项 | 默认值 | 说明 |
+| Option | Default | Description |
 | --- | --- | --- |
-| 透明过渡宽度 | 1.5 | 染色玻璃与相连普通玻璃之间，交界每侧的过渡宽度（格），0.25–2 |
-| 颜色模糊 | 开 | 每块玻璃的颜色与周围一格内的玻璃混合 |
-| 染色玻璃花纹过渡层数 | 2 | 花纹不同的染色玻璃相连时，每个面最多叠加几种其他玻璃的贴图，0–4，0 为关闭；每多一层，过渡区内的面数约多一倍 |
-| 整块玻璃细分 | 4 | 颜色有变化时，每个面每个方向切分的段数，1–8 |
-| 玻璃板竖向 / 横向细分 | 4 / 2 | 颜色有变化时，玻璃板高度方向和每条臂长度方向切分的段数，1–8 |
-| 信标光柱渐变 | 开 | 光柱换颜色时，在一格高度内平滑过渡 |
-| 信标光柱染色 | 开 | 染色光柱穿过的普通玻璃和玻璃板染成光柱的颜色 |
-| 弱通道阈值 | 0.2 | 染色贴图中过暗的颜色通道改用亮度花纹；修改后重新加载资源 |
-| 可见像素透明度 | 32 | 计算贴图各通道最亮值时忽略更透明的像素；修改后重新加载资源 |
+| Clear Transition Width | `1.5` | Width in blocks of the transition on each side of the border between stained and connected clear glass (`0.25–2`). |
+| Color Blur | `On` | Mixes each glass block's color with neighboring glass within one block. |
+| Stained Pattern Layers | `2` | Maximum number of neighboring texture layers overlaid per face where different stained patterns meet (`0–4`, `0` disables; each extra layer roughly doubles faces in transition zones). |
+| Block Subdivisions | `4` | Pieces per direction a full block face is split into where color varies (`1–8`). |
+| Pane Rows / Segments | `4` / `2` | Subdivisions along pane height and each arm's length where color varies (`1–8`). |
+| Beacon Beam Gradient | `On` | Smoothly fades beacon beam color transitions over one block of height. |
+| Beacon Beam Dye | `On` | Clear glass and panes inside a colored beacon beam take the beam's color. |
+| Weak Channel Threshold | `0.2` | Channels whose brightest value falls below this ratio use luminance pattern instead (reloads resources on change). |
+| Visible Pixel Alpha | `32` | Pixels below this alpha are ignored when sampling brightest channel values (reloads resources on change). |
 
-保存后会立即重新渲染已加载的区块。
+---
 
-## 构建
+## Branches & Maintenance (For Developers)
 
-在项目目录使用 Java 21 运行 `./gradlew buildAndCollect`（Windows 使用 `.\gradlew.bat buildAndCollect`），会构建 1.21.1 与 1.21.8 两个版本，并把安装包收集到 `build/libs`。只运行 `build` 时，各版本的安装包分别位于 `versions/<版本>/build/libs`。
+### Branch Strategy
 
-## 0.5.1 玻璃墙实测
+This repository uses versioned generation branches instead of a generic `main` branch, with Stonecutter managing patch versions inside each branch:
 
-整块玻璃仍使用 3×3 个颜色采样点。仅在某一轴上三组采样的完整 ARGB 都相等、且同属一个面的同一贴图层时才沿该轴合并。普通与染色 CTM 层仍分别绘制，墙面沿用原来的整面 UV。整块玻璃和玻璃板共享本次资源重载的贴图缓存，每个构建线程复用自己的坐标和采样缓冲。邻块颜色缓存只在生成当前方块时有效。
+| Branch | Game Versions | Maintenance Status |
+| --- | --- | --- |
+| `26.x` (default) | `26.1.2` / `26.2` / `26.3` (Stonecutter VCS base: `26.3`) | **Primary development branch** — all new features and refactors land here first. |
+| `1.21.x` | `1.21.1` / `1.21.8` / `1.21.11` (Stonecutter VCS base: `1.21.8`) | **Active compatibility branch** — receives backports from `26.x`. |
+| `sodium-0.5` | `1.19.4` / `1.20.1` / `1.20.4` | **Archived** — legacy Sodium 0.5 branch, no longer maintained. |
 
-对比使用 Minecraft 1.21.8、Java 21、Fabric Loader 0.20.1、Fabric API 0.136.1、Sodium 0.7.3、Sodium Extra 0.7.0 和 Continuity 3.0.1-beta.1。两个版本从相同的 GlassQA 存档初始数据生成 12×12×1 的悬空墙，使用同一视角和设置（1000×690、视距 5 区块、关闭环境光遮蔽）。逐排墙按红、橙、黄、黄绿、青、蓝、紫循环，双向墙按横纵坐标之和循环。
+### Differences Between `26.x` and `1.21.x`
 
-| 场景 | 正面四边形 0.5.0 → 0.5.1 | 整墙四边形 0.5.0 → 0.5.1 | 整墙减少 |
-| --- | ---: | ---: | ---: |
-| 纯色 | 576 → 144 | 1344 → 336 | 75.0% |
-| 逐排换色 | 576 → 288 | 1344 → 648 | 51.8% |
-| 横竖换色 | 576 → 576 | 1344 → 1248 | 7.1% |
-
-计数直接读取客户端世界模型写入 Fabric MutableMesh 的四边形。整墙包含背面和外缘，模型会剔除玻璃之间的内部面。默认材质、切换到 Clear Glass 1.2.1（五图 ctm_compact）、再切换到 UBB（47 图 ctm）、在 UBB 下再次完整重载，这四轮的上述计数均相同。另测了普通与染色玻璃、玻璃板混合墙，CTM 下整墙从 1736 片降至 1464 片。
-
-每轮把整块玻璃的输出重新细分到基线的半格网格，逐块核对四边形朝向、剔除面、渲染层、顶点位置、UV 和 ARGB 的排序校验值。玻璃板使用实际输出顶点。四种墙、四轮共 16 组均匹配。测试通过客户端完整资源重载接口执行，覆盖和 F3+T 相同的重载路径。原始计数与固定视角游戏截图见 [benchmarks/0.5.1](benchmarks/0.5.1)。
-
-
-### Sodium 区块构建计时
-
-i5-1235U、Iris Xe、默认玻璃材质，沿用前述客户端与图形设置。三面墙分别放在独立的 16×16×16 区块段中，每段仅有一面 12×12 的玻璃墙。相机固定，每个游戏刻轮流请求一个段重建。每次独立启动客户端后，各墙先预热 150 次，再记录 150 次。测试专用探针在 Sodium 工作线程上测量一次 ChunkBuilderMeshingTask.execute 成功执行的耗时，范围包含网格生成和该任务内的透明几何处理。任务排队、GPU 上传和帧时间在计时范围之外。
-
-运行顺序为 0.5.0 A、0.5.1 A、0.5.1 B、0.5.0 B。下表是每次独立运行的中位数，单位为毫秒。
-
-| 墙面 | 0.5.0 A | 0.5.1 A | 0.5.0 B | 0.5.1 B |
-| --- | ---: | ---: | ---: | ---: |
-| 纯色 | 1.242 | 0.672 | 1.261 | 0.665 |
-| 逐排换色 | 1.188 | 0.804 | 1.255 | 0.871 |
-| 横竖换色 | 1.181 | 1.063 | 1.299 | 1.053 |
-
-各次原始记录见 [rebuild.csv](benchmarks/0.5.1/rebuild.csv)。单段耗时受机器负载与线程调度影响。此次未测 FPS、显存或分配字节数，也未覆盖光影包、环境光遮蔽开启时的局部光照和全部玻璃板连接组合。
+- **Piston-moving glass rendering** is supported on `26.x` and `1.21.11`; `1.21.1` and `1.21.8` keep vanilla movement visuals and refresh the 2-block neighborhood gradient once placed.
