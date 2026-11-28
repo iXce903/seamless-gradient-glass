@@ -7,10 +7,14 @@ import java.util.Properties;
 import java.util.Set;
 import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.resources.metadata.animation.FrameSize;
+//? if >=1.21.11 {
+/*import net.minecraft.resources.Identifier;
+*///?} else {
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceMetadata;
+//?}
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.ResourceMetadata;
 
 public final class Ctm {
     // Standard tile order. Bits circle the face from left to bottom to right to top:
@@ -47,7 +51,11 @@ public final class Ctm {
         return props.getProperty("method", "ctm").trim().equals("ctm_compact");
     }
 
+    //? if >=1.21.11 {
+    /*static boolean matches(Properties props, Identifier rule, String block, boolean pane) {
+    *///?} else {
     static boolean matches(Properties props, ResourceLocation rule, String block, boolean pane) {
+    //?}
         String faces = props.getProperty("faces", "all").trim();
         if (!faces.equals("all") && !(pane && faces.equals("sides"))) return false;
         if (!List.of("block", "tile", "state").contains(props.getProperty("connect", "block").trim())) return false;
@@ -69,7 +77,11 @@ public final class Ctm {
         return false;
     }
 
+    //? if >=1.21.11 {
+    /*static List<Resource> tiles(ResourceManager manager, Properties props, Identifier rule, int count) {
+    *///?} else {
     static List<Resource> tiles(ResourceManager manager, Properties props, ResourceLocation rule, int count) {
+    //?}
         var result = new ArrayList<Resource>(count);
         for (String token : props.getProperty("tiles", "").trim().split("\\s+")) {
             if (token.isEmpty()) break;
@@ -85,7 +97,11 @@ public final class Ctm {
         return null;
     }
 
+    //? if >=1.21.11 {
+    /*private static boolean addTile(ResourceManager manager, Identifier rule, String token, List<Resource> result) {
+    *///?} else {
     private static boolean addTile(ResourceManager manager, ResourceLocation rule, String token, List<Resource> result) {
+    //?}
         String namespace = rule.getNamespace();
         int colon = token.indexOf(':');
         if (colon >= 0) {
@@ -98,7 +114,11 @@ public final class Ctm {
         else if (token.startsWith("textures/") || token.startsWith("optifine/")) path = token;
         else if (colon >= 0 || token.startsWith("block/")) path = "textures/" + token;
         else path = rule.getPath().substring(0, rule.getPath().lastIndexOf('/') + 1) + token.replaceFirst("^\\./", "");
+        //? if >=1.21.11 {
+        /*var id = Identifier.tryParse(namespace + ":" + path + (path.endsWith(".png") ? "" : ".png"));
+        *///?} else {
         var id = ResourceLocation.tryParse(namespace + ":" + path + (path.endsWith(".png") ? "" : ".png"));
+        //?}
         if (id == null) return false;
         var resource = manager.getResource(id);
         resource.ifPresent(result::add);
@@ -115,7 +135,11 @@ public final class Ctm {
             return new Compact(images.get(0).size(), pixels);
         }
 
+        //? if >=1.21.11 {
+        /*SpriteContents tile(Identifier id, int connections) {
+        *///?} else {
         SpriteContents tile(ResourceLocation id, int connections) {
+        //?}
             var image = new NativeImage(size, size, false);
             for (int y = 0; y < size; y++) {
                 boolean bottom = y >= size / 2;
@@ -129,7 +153,11 @@ public final class Ctm {
                     Pixels.setPixel(image, x, y, pixels[tile][y * size + x]);
                 }
             }
+            //? if >=1.21.11 {
+            /*return new SpriteContents(id, new FrameSize(size, size), image);
+            *///?} else {
             return new SpriteContents(id, new FrameSize(size, size), image, ResourceMetadata.EMPTY);
+            //?}
         }
     }
 }

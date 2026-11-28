@@ -5,7 +5,12 @@ import com.ixce.gradientglass.GlassMaterial;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+//? if >=1.21.11 {
+/*import net.minecraft.data.AtlasIds;
+import net.minecraft.resources.Identifier;
+*///?} else {
 import net.minecraft.resources.ResourceLocation;
+//?}
 
 public final class GlassTextures {
     private static final int MATERIALS = GlassMaterial.NAMES.length;
@@ -23,7 +28,11 @@ public final class GlassTextures {
             if (current != null) return current;
             synchronized (this) {
                 if (textures == null) {
+                    //? if >=1.21.11 {
+                    /*textures = new GlassTextures(Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.BLOCKS));
+                    *///?} else {
                     textures = new GlassTextures(Minecraft.getInstance().getModelManager().getAtlas(TextureAtlas.LOCATION_BLOCKS));
+                    //?}
                 }
                 return textures;
             }
@@ -129,12 +138,21 @@ public final class GlassTextures {
         return sprite != null ? sprite : find(atlas, GlassSprites.PLAIN[material][15]);
     }
 
+    //? if >=1.21.11 {
+    /*private static TextureAtlasSprite vanilla(TextureAtlas atlas, String name) {
+        return atlas.getSprite(Identifier.withDefaultNamespace("block/" + name));
+    }
+
+    // The atlas returns its missing sprite for an absent id.
+    private static TextureAtlasSprite find(TextureAtlas atlas, Identifier id) {
+    *///?} else {
     private static TextureAtlasSprite vanilla(TextureAtlas atlas, String name) {
         return atlas.getSprite(ResourceLocation.withDefaultNamespace("block/" + name));
     }
 
     // The atlas returns its missing sprite for an absent id.
     private static TextureAtlasSprite find(TextureAtlas atlas, ResourceLocation id) {
+    //?}
         var sprite = atlas.getSprite(id);
         return sprite.contents().name().equals(id) ? sprite : null;
     }

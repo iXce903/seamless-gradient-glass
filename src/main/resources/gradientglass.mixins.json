@@ -1,6 +1,7 @@
 {
   "required": true,
   "package": "com.ixce.gradientglass.mixin",
+  "plugin": "com.ixce.gradientglass.mixin.GradientGlassMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "client": [
     "BeaconBlockEntityMixin",

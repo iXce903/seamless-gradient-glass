@@ -15,7 +15,11 @@ import net.minecraft.client.renderer.texture.atlas.SpriteSource;
 /*import com.ixce.gradientglass.mixin.SpriteSourcesAccessor;
 import net.minecraft.client.renderer.texture.atlas.SpriteSourceType;
 *///?}
+//? if >=1.21.11 {
+/*import net.minecraft.resources.Identifier;
+*///?} else {
 import net.minecraft.resources.ResourceLocation;
+//?}
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
@@ -30,6 +34,15 @@ public final class GlassSprites implements SpriteSource {
     private static final int MATERIALS = GlassMaterial.NAMES.length;
 
     // Slot m holds material m's block, slot MATERIALS + m its pane.
+    //? if >=1.21.11 {
+    /*static final Identifier[][] CTM = new Identifier[MATERIALS + GlassMaterial.PANES][Ctm.TILES];
+    static final Identifier[][] PLAIN = new Identifier[MATERIALS][16];
+    static final Identifier[] PANE_TOPS = new Identifier[GlassMaterial.PANES];
+    // Only textures of the vanilla size have their borders covered where glass joins.
+    static final int DEFAULT_SIZE = 16;
+
+    record Loaded(Map<Identifier, TextureNormalizer.Tint> tints, int[] averages, boolean[] replaced) {}
+    *///?} else {
     static final ResourceLocation[][] CTM = new ResourceLocation[MATERIALS + GlassMaterial.PANES][Ctm.TILES];
     static final ResourceLocation[][] PLAIN = new ResourceLocation[MATERIALS][16];
     static final ResourceLocation[] PANE_TOPS = new ResourceLocation[GlassMaterial.PANES];
@@ -37,6 +50,7 @@ public final class GlassSprites implements SpriteSource {
     static final int DEFAULT_SIZE = 16;
 
     record Loaded(Map<ResourceLocation, TextureNormalizer.Tint> tints, int[] averages, boolean[] replaced) {}
+    //?}
 
     static volatile Loaded loaded = new Loaded(Map.of(), new int[MATERIALS], new boolean[MATERIALS]);
 
@@ -50,6 +64,19 @@ public final class GlassSprites implements SpriteSource {
         for (int material = 1; material < GlassMaterial.PANES; material++) PANE_TOPS[material] = id("top_" + material);
     }
 
+    //? if >=1.21.11 {
+    /*private static Identifier id(String name) {
+        return Identifier.fromNamespaceAndPath("gradientglass", "block/" + name);
+    }
+
+    private static String slotName(int slot) {
+        return slot < MATERIALS ? GlassMaterial.NAMES[slot] : GlassMaterial.NAMES[slot - MATERIALS] + "_pane";
+    }
+
+    private static Identifier texture(String name) {
+        return Identifier.withDefaultNamespace("textures/block/" + name + ".png");
+    }
+    *///?} else {
     private static ResourceLocation id(String name) {
         return ResourceLocation.fromNamespaceAndPath("gradientglass", "block/" + name);
     }
@@ -61,6 +88,7 @@ public final class GlassSprites implements SpriteSource {
     private static ResourceLocation texture(String name) {
         return ResourceLocation.withDefaultNamespace("textures/block/" + name + ".png");
     }
+    //?}
 
     //? if >=1.21.4 {
     @Override
@@ -78,7 +106,11 @@ public final class GlassSprites implements SpriteSource {
     public void run(ResourceManager manager, Output atlas) {
         Map<String, Integer> packPriority = new HashMap<>();
         manager.listPacks().forEachOrdered(pack -> packPriority.put(pack.packId(), packPriority.size()));
+        //? if >=1.21.11 {
+        /*Map<Identifier, TextureNormalizer.Tint> tints = new HashMap<>();
+        *///?} else {
         Map<ResourceLocation, TextureNormalizer.Tint> tints = new HashMap<>();
+        //?}
         int[] averages = new int[MATERIALS];
         boolean[] replaced = new boolean[MATERIALS];
         int[] plainPriority = new int[MATERIALS];
@@ -131,7 +163,11 @@ public final class GlassSprites implements SpriteSource {
         }
 
         var rules = new ArrayList<>(manager.listResources("optifine/ctm", id -> id.getPath().endsWith(".properties")).entrySet());
+        //? if >=1.21.11 {
+        /*rules.sort(Comparator.<Map.Entry<Identifier, Resource>>comparingInt(rule ->
+        *///?} else {
         rules.sort(Comparator.<Map.Entry<ResourceLocation, Resource>>comparingInt(rule ->
+        //?}
                 packPriority.getOrDefault(rule.getValue().sourcePackId(), -1)).reversed().thenComparing(Map.Entry::getKey));
         boolean[] found = new boolean[CTM.length];
         int remaining = CTM.length;

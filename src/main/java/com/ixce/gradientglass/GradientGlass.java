@@ -23,7 +23,11 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
+//? if >=1.21.11 {
+/*import net.minecraft.resources.Identifier;
+*///?} else {
 import net.minecraft.resources.ResourceLocation;
+//?}
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -62,11 +66,19 @@ public class GradientGlass implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> BeaconBeamDyes.clear());
         //? if >=1.21.5 {
         BlockRenderLayerMap.putBlocks(ChunkSectionLayer.TRANSLUCENT, Blocks.GLASS, Blocks.GLASS_PANE);
+        //? if >=1.21.11 {
+        /*SpriteSourcesAccessor.gradientglass$idMapper().put(Identifier.fromNamespaceAndPath("gradientglass", "glass"), GlassSprites.CODEC);
+        *///?} else {
         SpriteSourcesAccessor.gradientglass$idMapper().put(ResourceLocation.fromNamespaceAndPath("gradientglass", "glass"), GlassSprites.CODEC);
+        //?}
         ModelLoadingPlugin.register(context -> {
             var textures = new GlassTextures.Lazy();
             var event = context.modifyBlockModelAfterBake();
+            //? if >=1.21.11 {
+            /*var phase = Identifier.fromNamespaceAndPath("gradientglass", "glass_faces");
+            *///?} else {
             var phase = ResourceLocation.fromNamespaceAndPath("gradientglass", "glass_faces");
+            //?}
             event.addPhaseOrdering(ModelModifier.WRAP_LAST_PHASE, phase);
             event.register(phase, (model, ctx) -> {
                 if (GlassMaterial.ofPane(ctx.state()) != GlassMaterial.NONE) return new GlassPaneModel(model, textures);
