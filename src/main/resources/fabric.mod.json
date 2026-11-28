@@ -4,6 +4,14 @@
   "version": "${version}",
   "name": "Seamless Gradient Glass",
   "description": "Connected glass with smooth transitions between neighboring dye colors.",
+  "authors": ["iXce903"],
+  "contact": {
+    "homepage": "https://github.com/iXce903/seamless-gradient-glass",
+    "sources": "https://github.com/iXce903/seamless-gradient-glass",
+    "issues": "https://github.com/iXce903/seamless-gradient-glass/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/gradientglass/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": ["com.ixce.gradientglass.GradientGlass"],

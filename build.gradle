@@ -51,6 +51,12 @@ java {
     targetCompatibility = JavaVersion.VERSION_25
 }
 
+jar {
+    from(rootProject.file("LICENSE")) {
+        rename { "${it}_${project.archives_base_name}" }
+    }
+}
+
 tasks.register('buildAndCollect', Copy) {
     group = 'build'
     description = 'Builds this version and copies its jar to the root build/libs folder.'
