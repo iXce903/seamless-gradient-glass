@@ -10,7 +10,7 @@ A client-side Fabric mod for Minecraft Java Edition `26.x` and `1.21.x`. Going b
 
 ### Seamless Connected Glass & Color Gradients
 
-- **Unified Transparent Glass Walls**: Adjacent clear glass, 16-color stained glass, and tinted glass automatically merge into a single continuous wall. Inner borders between connected blocks are removed, leaving only the outer perimeter frame while preserving the diagonal glass glare.
+- **Unified Transparent Glass Walls**: Adjacent clear glass, all 16 stained glass colors, and tinted glass automatically merge into a single continuous wall. Inner borders between connected blocks are removed, leaving only the outer perimeter frame while preserving the diagonal glass glare.
 - **Smooth Color Transitions**: Neighboring stained glass blocks of different colors no longer show harsh tile seams—colors blend smoothly both horizontally and vertically. Even high-contrast pairs such as red and blue fade naturally without sharp edges or corners, while solid-color regions retain their clean, transparent look.
 - **Live Updates**: Placing or breaking glass immediately updates the surrounding gradient effect, and existing builds in your worlds work automatically without modification.
 
@@ -32,7 +32,7 @@ A client-side Fabric mod for Minecraft Java Edition `26.x` and `1.21.x`. Going b
 ### Beacon Beam Gradients & Tinting
 
 - **Smooth Segment-by-Segment Beam Transitions**: When an active beacon beam passes through a stained glass block of a new color, it fades smoothly from the previous color to the new color over the height of one block instead of snapping abruptly. Stacking multiple colors creates a continuous rainbow beam across both the inner core and outer glow.
-- **Beam-to-Glass Dyeing**: A colored beacon beam passing upward through clear glass blocks or clear glass panes tints those clear blocks with the beam's current color and blends them into neighboring glass.
+- **Beam-to-Glass Tinting**: A colored beacon beam passing upward through clear glass blocks or clear glass panes tints those clear blocks with the beam's current color and blends them into neighboring glass.
 
 ### Resource Pack & Mod Compatibility
 
@@ -63,27 +63,6 @@ Saving changes in the config GUI immediately re-renders loaded chunks:
 | Clear Transition Width | `1.5` | Width in blocks of the transition on each side of the border between stained and connected clear glass (`0.25–2`). |
 | Color Blur | `On` | Mixes each glass block's color with neighboring glass within one block. |
 | Stained Pattern Layers | `2` | Maximum number of neighboring texture layers overlaid per face where different stained patterns meet (`0–4`, `0` disables; each extra layer roughly doubles faces in transition zones). |
-| Block Subdivisions | `4` | Pieces per direction a full block face is split into where color varies (`1–8`). |
+| Block Subdivisions | `4` | Subdivisions per axis on a full block face where color varies (`1–8`). |
 | Pane Rows / Segments | `4` / `2` | Subdivisions along pane height and each arm's length where color varies (`1–8`). |
 | Beacon Beam Gradient | `On` | Smoothly fades beacon beam color transitions over one block of height. |
-| Beacon Beam Dye | `On` | Clear glass and panes inside a colored beacon beam take the beam's color. |
-| Weak Channel Threshold | `0.2` | Channels whose brightest value falls below this ratio use luminance pattern instead (reloads resources on change). |
-| Visible Pixel Alpha | `32` | Pixels below this alpha are ignored when sampling brightest channel values (reloads resources on change). |
-
----
-
-## Branches & Maintenance (For Developers)
-
-### Branch Strategy
-
-This repository uses versioned generation branches instead of a generic `main` branch, with Stonecutter managing patch versions inside each branch:
-
-| Branch | Game Versions | Maintenance Status |
-| --- | --- | --- |
-| `26.x` (default) | `26.1.2` / `26.2` / `26.3` (Stonecutter VCS base: `26.3`) | **Primary development branch** — all new features and refactors land here first. |
-| `1.21.x` | `1.21.1` / `1.21.8` / `1.21.11` (Stonecutter VCS base: `1.21.8`) | **Active compatibility branch** — receives backports from `26.x`. |
-| `sodium-0.5` | `1.19.4` / `1.20.1` / `1.20.4` | **Archived** — legacy Sodium 0.5 branch, no longer maintained. |
-
-### Differences Between `26.x` and `1.21.x`
-
-- **Piston-moving glass rendering** is supported on `26.x` and `1.21.11`; `1.21.1` and `1.21.8` keep vanilla movement visuals and refresh the 2-block neighborhood gradient once placed.
